@@ -361,7 +361,7 @@ PAGES.meeting = (v) => {
   const list = S.fb.filter((x) => x.target_type === "meeting" && x.target_id === m.id);
   v.innerHTML = `
   <div class="card"><h2 style="font-size:17px">${esc(m.date)} · ${esc(m.title)}</h2>
-    <p class="muted" style="margin-top:-6px">출처: 회의 녹음 음성인식·화자구분 결과 기반. 화자 매핑·담당자는 추정</p>
+    <p class="muted" style="margin-top:-6px">출처: 회의 녹음 음성인식 결과 기반</p>
     <div class="tbl-wrap"><table><tbody>${m.overview.map(([k, val, n]) => `<tr><th style="width:110px">${esc(k)}</th><td>${esc(val)}${n ? `<span class="cue">※ ${esc(n)}</span>` : ""}</td></tr>`).join("")}</tbody></table></div></div>
   <div class="sec-title">핵심 요약</div><div class="card"><ul class="plain">${m.summary.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div>
   <div class="sec-title">안건별 논의</div>
@@ -372,10 +372,6 @@ PAGES.meeting = (v) => {
     <div class="card"><h2>미결·확인 필요</h2><ul class="plain">${m.open.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div>
   </div>
   <div class="sec-title">액션 아이템 → <a href="#/fu">F/U 트래커</a>에서 관리</div>
-  <div class="sec-title">화자 분석</div>
-  <div class="tbl-wrap"><table><thead><tr><th>화자</th><th>발언 시간</th><th>추정 인물·역할</th><th>주요 입장</th></tr></thead><tbody>
-  ${m.speakers.map(([a, b, c, d]) => `<tr><td class="id">${esc(a)}</td><td style="white-space:nowrap">${esc(b)}</td><td>${esc(c)}</td><td class="tx2">${esc(d)}</td></tr>`).join("")}</tbody></table></div>
-  <div class="card mt"><h2>분석 방법·한계</h2><ul class="plain tx2">${m.method.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div>
   <div class="grid g2 mt"><div class="card"><h2>회의록 피드백 <span class="sub">${list.length}건</span></h2>${threadHtml(list)}</div>
   <div>${fbFormHtml({ target_type: "meeting", target_id: m.id })}</div></div>`;
   bindFb(v, { target_type: "meeting", target_id: m.id });
