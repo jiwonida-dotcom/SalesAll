@@ -1,11 +1,11 @@
 -- 초기 데이터 (scripts/build_seed.py 로 생성). 기준일 2026-11-05
 
-INSERT OR IGNORE INTO fu_items (id, title, owner, due, status, priority, source, note, sort, updated_by) VALUES ('F1', 'U+ 테스트 계정·요구사항 문서 양식 요청, 참석자 계정 전달', '화자A (허지원 책임 추정)', '즉시', '미착수', '상', '회의 11/05', '', 10, 'seed');
+INSERT OR IGNORE INTO fu_items (id, title, owner, due, status, priority, source, note, sort, updated_by) VALUES ('F1', 'U+ 테스트 계정·요구사항 문서 양식 요청, 참석자 계정 전달', '허지원 책임', '즉시', '미착수', '상', '회의 11/05', '', 10, 'seed');
 INSERT OR IGNORE INTO fu_items (id, title, owner, due, status, priority, source, note, sort, updated_by) VALUES ('F2', '테스트 계정 화면 사용, 항목별 요구사항 글·화면 캡처 정리', '참석자 전원', '다음 주', '미착수', '상', '회의 11/05', '요구사항 페이지 R01~R22 기준으로 정리', 20, 'seed');
-INSERT OR IGNORE INTO fu_items (id, title, owner, due, status, priority, source, note, sort, updated_by) VALUES ('F3', 'KT M모바일 스마트 서식지 화면·흐름 자료 공유', '화자B (추정)', '미정', '미착수', '중', '회의 11/05', '', 30, 'seed');
-INSERT OR IGNORE INTO fu_items (id, title, owner, due, status, priority, source, note, sort, updated_by) VALUES ('F4', '외국인(여권) 개통 가능 여부, 외부 접속 테스트 가능 여부 U+ 문의', '화자A (허지원 책임 추정)', '미정', '미착수', '중', '회의 11/05', '가이드상 고객유형 ''외국인'' 존재 → 여권 개통 범위 확인', 40, 'seed');
-INSERT OR IGNORE INTO fu_items (id, title, owner, due, status, priority, source, note, sort, updated_by) VALUES ('F5', '의견 통합 U+ 전달, 재미팅', '화자A (허지원 책임 추정)', '다음 주 내부 미팅 후', '미착수', '상', '회의 11/05', '', 50, 'seed');
-INSERT OR IGNORE INTO fu_items (id, title, owner, due, status, priority, source, note, sort, updated_by) VALUES ('F6', '요구사항 확정, 투자심의 준비', '화자A (허지원 책임 추정)', '2026-12', '미착수', '상', '회의 11/05', '', 60, 'seed');
+INSERT OR IGNORE INTO fu_items (id, title, owner, due, status, priority, source, note, sort, updated_by) VALUES ('F3', 'KT M모바일 스마트 서식지 화면·흐름 자료 공유', '미정', '미정', '미착수', '중', '회의 11/05', '', 30, 'seed');
+INSERT OR IGNORE INTO fu_items (id, title, owner, due, status, priority, source, note, sort, updated_by) VALUES ('F4', '외국인(여권) 개통 가능 여부, 외부 접속 테스트 가능 여부 U+ 문의', '허지원 책임', '미정', '미착수', '중', '회의 11/05', '가이드상 고객유형 ''외국인'' 존재 → 여권 개통 범위 확인', 40, 'seed');
+INSERT OR IGNORE INTO fu_items (id, title, owner, due, status, priority, source, note, sort, updated_by) VALUES ('F5', '의견 통합 U+ 전달, 재미팅', '허지원 책임', '다음 주 내부 미팅 후', '미착수', '상', '회의 11/05', '', 50, 'seed');
+INSERT OR IGNORE INTO fu_items (id, title, owner, due, status, priority, source, note, sort, updated_by) VALUES ('F6', '요구사항 확정, 투자심의 준비', '허지원 책임', '2026-12', '미착수', '상', '회의 11/05', '', 60, 'seed');
 INSERT OR IGNORE INTO fu_items (id, title, owner, due, status, priority, source, note, sort, updated_by) VALUES ('F7', '화자A~D ↔ 참석자(고태호·허지원 책임, 헬로모바일·U+ 담당자) 매핑 확정, 회의록 반영', '허지원 책임', '미정', '미착수', '중', '회의록 정리', '음성인식 ''허주환 책임'' → 허지원 책임 오인식 추정', 70, 'seed');
 INSERT OR IGNORE INTO fu_items (id, title, owner, due, status, priority, source, note, sort, updated_by) VALUES ('F8', '액션 아이템 담당자·기한 확정', '허지원 책임', '다음 주 내부 미팅', '미착수', '중', '회의록 정리', '', 80, 'seed');
 INSERT OR IGNORE INTO fu_items (id, title, owner, due, status, priority, source, note, sort, updated_by) VALUES ('F9', '녹취록 ''확인 필요'' 시스템명·앱 이름 확정(U+ 연동 시스템, 자사 앱)', '미정', '미정', '미착수', '하', '회의록 정리', '''세일즈월드'' 표기는 세일즈올(U+Sales All)로 정정 완료', 90, 'seed');
