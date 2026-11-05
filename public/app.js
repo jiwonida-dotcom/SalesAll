@@ -294,7 +294,7 @@ PAGES.req = (v) => {
     <td class="tx2" style="font-size:13px;min-width:240px"><span class="pre">${esc(r.current_state)}</span> ${slideLinks(r.guide_ref)}</td>
     <td>${tag(r.gap)}</td><td>${tag(r.decision)}</td><td>${tag(r.priority)}</td><td>${tag(r.status)}</td></tr>`).join("") || `<tr><td colspan="8" class="empty">${S.apiOk ? "해당 요구사항 없음" : "D1 연결 필요"}</td></tr>`}
   </tbody></table></div>
-  <p class="muted mt8">갭: 세일즈올 가이드(2026.02) 기준 현행 기능 대비 판단 · '가이드 분석(제안)'은 회의 외 추가 검토 항목</p>`;
+  <p class="muted mt8">갭: 세일즈올 가이드(2026.02) 기준 현행 기능 대비 판단 · '가이드 분석(제안)'·'크로스 분석(제안)'은 회의 외 추가 검토 항목</p>`;
   v.querySelectorAll(".filters select[data-k]").forEach((s) => (s.onchange = () => { f[s.dataset.k] = s.value; render(); }));
   $("#rQ").oninput = (e) => { f.q = e.target.value; clearTimeout(PAGES.req.t); PAGES.req.t = setTimeout(() => { render(); const q = $("#rQ"); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }, 250); };
   const add = $("#addReq"); if (add) add.onclick = () => editModal("req");
@@ -415,6 +415,57 @@ PAGES.guideSlide = (v, n) => {
   bindFb(v, { target_type: "guide", target_id: "p." + n });
 };
 
+PAGES.cross = (v) => {
+  const X = S.content.cross;
+  if (!X) { v.innerHTML = `<div class="empty">크로스 분석 데이터 없음</div>`; return; }
+  const f = PAGES.cross.f || (PAGES.cross.f = { verdict: "" });
+  const VT = { "일치": "ok", "상이": "bad", "가이드 미기재": "info" };
+  const vtag = (x) => `<span class="tag t-${VT[x] || ""}">${esc(x)}</span>`;
+  const reqLinks = (r) => String(r || "").split(",").map((x) => x.trim()).filter(Boolean).map((x) => {
+    const row = S.req.find((q) => q.id === x);
+    return `<a class="chip-link" href="#/req/${x}" title="${esc(row ? row.title : "")}">${x}</a>`;
+  }).join("");
+  const rows = X.matrix.filter((r) => !f.verdict || r.verdict === f.verdict);
+  const cnt = X.matrix.reduce((m, r) => ((m[r.verdict] = (m[r.verdict] || 0) + 1), m), {});
+  const fbList = S.fb.filter((x) => x.target_type === "general" && x.target_id === "cross");
+  v.innerHTML = `
+  <div class="card"><h2 style="font-size:17px">가이드 × 회의록 크로스 분석 <span class="sub">${esc(X.basis)}</span></h2>
+    <div class="tbl-wrap"><table><tbody>${X.summary.map(([a, b, c]) => `<tr><th style="width:150px">${esc(a)}</th><td>${esc(b)}<span class="cue">※ ${esc(c)}</span></td></tr>`).join("")}</tbody></table></div></div>
+
+  <div class="sec-title">1. 회의 안건 × 가이드 현행 대조</div>
+  <div class="filters">
+    <select id="cxV"><option value="">판정 전체 (${X.matrix.length})</option>${["일치", "상이", "가이드 미기재"].map((k) => `<option value="${k}" ${f.verdict === k ? "selected" : ""}>${k} (${cnt[k] || 0})</option>`).join("")}</select>
+    <span class="sp"></span><span class="muted">일치: 회의 현황 인식과 가이드 현행 부합 · 상이: 불일치 · 가이드 미기재: 가이드로 판단 불가</span>
+  </div>
+  <div class="tbl-wrap"><table><thead><tr><th>안건 (시각)</th><th>회의 현황·요구</th><th>가이드 현행</th><th>판정</th><th>시사점</th><th>요구사항</th></tr></thead><tbody>
+  ${rows.map((r) => `<tr><td style="white-space:nowrap;font-weight:600">${esc(r.agenda)}<span class="cue">${esc(r.t)}</span></td>
+    <td class="tx2" style="font-size:13px">${esc(r.meeting)}</td>
+    <td style="font-size:13px">${esc(r.guide)} ${slideLinks(r.slides)}</td>
+    <td>${vtag(r.verdict)}</td><td style="font-size:13px">${esc(r.note)}</td><td>${reqLinks(r.reqs)}</td></tr>`).join("")}
+  </tbody></table></div>
+
+  <div class="sec-title">2. 회의 인식 정정</div>
+  <div class="tbl-wrap"><table><thead><tr><th>항목</th><th>회의 발언</th><th>가이드 확인</th><th>잔여 확인</th></tr></thead><tbody>
+  ${X.corrections.map(([a, b, c, d]) => `<tr><td style="white-space:nowrap;font-weight:600">${esc(a)}</td><td class="tx2">${esc(b)}</td><td>${esc(c)}</td><td class="tx2">${esc(d.replace(/^잔여 확인:\s*/, ""))}</td></tr>`).join("")}
+  </tbody></table></div>
+
+  <div class="sec-title">3. 회의 미논의 가이드 기능 <span class="muted" style="font-size:13px;font-weight:400">MVNO 적용 검토 · 크로스 분석(제안)</span></div>
+  <div class="tbl-wrap"><table><thead><tr><th>기능</th><th>가이드 현행</th><th>MVNO 검토 쟁점</th><th>요구사항</th></tr></thead><tbody>
+  ${X.uncovered.map((r) => `<tr><td style="white-space:nowrap;font-weight:600">${esc(r.item)}</td><td style="font-size:13px">${esc(r.guide)} ${slideLinks(r.slides)}</td><td>${esc(r.impact)}</td><td>${reqLinks(r.req)}</td></tr>`).join("")}
+  </tbody></table></div>
+
+  <div class="grid g2 mt">
+    <div class="card"><h2>4. 가이드 확인 불가 항목 <span class="sub">${X.unverifiable.length}건 · 테스트 계정·U+ 확인</span></h2>
+      <div class="tbl-wrap"><table><tbody>${X.unverifiable.map(([a, b, c]) => `<tr><td>${reqLinks(a)}</td><td>${esc(b)}<span class="cue">※ ${esc(c)}</span></td></tr>`).join("")}</tbody></table></div></div>
+    <div class="card"><h2>5. 테스트 계정 검증 체크리스트 <span class="sub">${X.checklist.length}항목 · F2</span></h2>
+      <div class="tbl-wrap"><table><thead><tr><th>영역</th><th>확인 항목</th><th>요구사항</th></tr></thead><tbody>${X.checklist.map(([a, b, c]) => `<tr><td style="white-space:nowrap;font-weight:600">${esc(a)}</td><td>${esc(b)}</td><td>${reqLinks(c)}</td></tr>`).join("")}</tbody></table></div></div>
+  </div>
+  <div class="grid g2 mt"><div class="card"><h2>크로스 분석 피드백 <span class="sub">${fbList.length}건</span></h2>${threadHtml(fbList)}</div>
+  <div>${fbFormHtml({ target_type: "general", target_id: "cross" })}</div></div>`;
+  $("#cxV").onchange = (e) => { f.verdict = e.target.value; render(); };
+  bindFb(v, { target_type: "general", target_id: "cross" });
+};
+
 PAGES.glossary = (v) => {
   v.innerHTML = `<div class="tbl-wrap"><table><thead><tr><th>용어</th><th>의미</th><th>비고</th></tr></thead><tbody>
   ${S.content.glossary.map(([a, b, c]) => `<tr><td style="font-weight:600;white-space:nowrap">${esc(a)}</td><td>${esc(b)}</td><td class="tx2">${esc(c)}</td></tr>`).join("")}</tbody></table></div>
@@ -444,7 +495,7 @@ PAGES.log = async (v) => {
 };
 
 // ---------- router ----------
-const TITLES = { dashboard: "대시보드", fu: "F/U 트래커", req: "요구사항", feedback: "피드백", meeting: "회의록", guide: "세일즈올 가이드", glossary: "용어집", docs: "자료 목록", log: "변경 이력" };
+const TITLES = { dashboard: "대시보드", fu: "F/U 트래커", req: "요구사항", cross: "크로스 분석", feedback: "피드백", meeting: "회의록", guide: "세일즈올 가이드", glossary: "용어집", docs: "자료 목록", log: "변경 이력" };
 async function render() {
   const [r = "dashboard", id] = location.hash.replace(/^#\/?/, "").split("/");
   const route = TITLES[r] ? r : "dashboard";
