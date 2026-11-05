@@ -1,44 +1,40 @@
-/* SalesAll MVNO 프로젝트 관리 — 프런트엔드 (빌드 없음, Vanilla JS) */
+/* SalesAll MVNO 프로젝트 관리 — IA v2 · GATAG UI (빌드 없음, Vanilla JS) */
 (() => {
 "use strict";
 
-const S = { content: null, fu: [], req: [], fb: [], me: "", apiOk: true };
+// ================= 상태 =================
+const S = { content: null, d: { fu: [], requirements: [], inquiries: [], decisions: [], issues: [], checks: [] }, comments: [], me: "", apiOk: false, form: null };
 
-const ENUM = {
-  fuStatus: ["미착수", "진행중", "완료", "보류"],
-  priority: ["상", "중", "하"],
-  gap: ["충족", "부분", "미충족", "확인필요"],
-  decision: ["결정", "요구", "미결", "제외"],
-  reqStatus: ["취합", "U+전달", "반영확정", "제외"],
-  fbCat: ["의견", "질문", "이슈", "결정요청"],
-  fbStatus: ["접수", "검토중", "완료"],
-};
-const TONE = {
-  "완료": "ok", "진행중": "info", "미착수": "", "보류": "warn",
-  "상": "bad", "중": "warn", "하": "",
-  "충족": "ok", "부분": "warn", "미충족": "bad", "확인필요": "info",
-  "결정": "ok", "요구": "pri", "미결": "warn", "제외": "",
-  "취합": "", "U+전달": "info", "반영확정": "ok",
-  "접수": "warn", "검토중": "info",
-  "의견": "", "질문": "info", "이슈": "bad", "결정요청": "pri",
-};
-const TARGET_LABEL = { general: "일반", fu: "F/U", requirement: "요구사항", meeting: "회의록", guide: "가이드" };
-
-// ---------- util ----------
+// ================= 유틸 =================
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const tag = (v) => (v ? `<span class="tag ${TONE[v] ? "t-" + TONE[v] : ""}">${esc(v)}</span>` : "");
-const opts = (arr, sel, all) => (all ? `<option value="">${all}</option>` : "") + arr.map((v) => `<option ${v === sel ? "selected" : ""}>${esc(v)}</option>`).join("");
-const fmtAt = (s) => (s ? s.replace("T", " ").slice(0, 16) : "");
-const toKST = (s) => { if (!s) return ""; const d = new Date(s.replace(" ", "T") + "Z"); return isNaN(d) ? s : new Date(d.getTime() + 9 * 3600e3).toISOString().slice(0, 16).replace("T", " "); };
-const slideLinks = (ref) => String(ref || "").split(",").map((s) => s.trim()).filter(Boolean).map((n) => `<a class="chip-link" href="#/guide/${n}">p.${n}</a>`).join("");
+const today = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+const toKST = (s) => { if (!s) return ""; const d = new Date(String(s).replace(" ", "T") + "Z"); return isNaN(d) ? s : new Date(d.getTime() + 9 * 3600e3).toISOString().slice(0, 16).replace("T", " "); };
 const count = (arr, k) => arr.reduce((m, r) => ((m[r[k]] = (m[r[k]] || 0) + 1), m), {});
+const ids = (s) => String(s || "").split(",").map((x) => x.trim()).filter(Boolean);
+const toast = (msg) => { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), 2200); };
 
-function toast(msg) {
-  const t = $("#toast"); t.textContent = msg; t.hidden = false;
-  clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), 2200);
-}
+const TONE = {
+  ok: ["완료", "정상", "확정", "해소", "반영완료", "충족", "결정", "필수"],
+  info: ["진행중", "전달", "대응중", "확인필요", "요구", "U+전달", "답변"],
+  warn: ["보류", "부분", "잠정", "미결", "중", "선택"],
+  critical: ["미충족", "이슈", "상", "번복", "열림"],
+  danger: ["리스크"],
+};
+const toneOf = (v) => Object.keys(TONE).find((k) => TONE[k].includes(v)) || "mute";
+const lv = (v) => (v ? `<span class="lv lv-${toneOf(v)}"><span class="chip"></span>${esc(v)}</span>` : "");
+const TONE_VAR = { ok: "--lv-ok", info: "--c7", warn: "--lv-warn", critical: "--lv-critical", danger: "--lv-danger", mute: "--baseline" };
 
+const ICON = {
+  list: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5.5 4h7M5.5 8h7M5.5 12h7M3 4h.01M3 8h.01M3 12h.01"/></svg>',
+  q: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="5.8"/><path d="M6.4 6.3a1.7 1.7 0 1 1 2.4 1.6c-.5.2-.8.6-.8 1.1v.3M8 11.3h.01"/></svg>',
+  alert: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3M8 11.3h.01"/></svg>',
+  flag: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 14V2.5M3.5 3h8l-1.6 2.7L11.5 8.4h-8"/></svg>',
+  doc: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4 1.8h5.2L12 4.6v9.6H4z"/><path d="M9 1.8v3h3M6 8h4M6 10.5h4"/></svg>',
+  chart: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 13V8M8 13V3.5M12 13V6"/></svg>',
+};
+
+// ================= API =================
 async function api(path, opt = {}) {
   const res = await fetch("/api/" + path, {
     method: opt.method || "GET",
@@ -51,468 +47,501 @@ async function api(path, opt = {}) {
   if (!res.ok) throw new Error(data.error || res.status);
   return data;
 }
-
 async function loadAll() {
   S.content = await fetch("data/content.json").then((r) => r.json());
   try {
-    const [me, fu, req, fb] = await Promise.all([api("me"), api("fu"), api("requirements"), api("feedback")]);
-    S.me = me.email; S.fu = fu; S.req = req; S.fb = fb; S.apiOk = true;
-    $("#banner").innerHTML = "";
-  } catch (e) {
-    S.apiOk = false;
-    $("#banner").innerHTML = `<div class="banner">API·D1 연결 실패 — 조회 전용 모드 (${esc(e.message)}). F/U·요구사항·피드백은 D1 연결 후 표시됩니다.</div>`;
-  }
-  $("#me").textContent = S.me ? "로그인: " + S.me : "";
+    const all = await api("all");
+    S.me = all.me; S.comments = all.comments;
+    for (const k of Object.keys(S.d)) S.d[k] = all[k] || [];
+    S.apiOk = true;
+  } catch (e) { S.apiOk = false; S.apiErr = e.message; }
 }
-async function reload(kind) {
-  if (!S.apiOk) return;
-  if (!kind || kind === "fu") S.fu = await api("fu");
-  if (!kind || kind === "req") S.req = await api("requirements");
-  if (!kind || kind === "fb") S.fb = await api("feedback");
+async function reload(key) {
+  if (key === "comments") S.comments = await api("comments");
+  else S.d[key] = await api(key);
 }
 
-// ---------- modal / form ----------
-function openModal(title, html, onMount) {
-  $("#modalTitle").textContent = title;
-  $("#modalBody").innerHTML = html;
-  $("#modal").hidden = false;
-  onMount && onMount($("#modalBody"));
-}
-function closeModal() { $("#modal").hidden = true; $("#modalBody").innerHTML = ""; }
-document.addEventListener("click", (e) => {
-  if (e.target.matches("[data-close]") || e.target.id === "modal") closeModal();
-});
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#modal").hidden) closeModal(); });
+// ================= 엔티티 정의 =================
+const E = {
+  fu: { ep: "fu", tt: "fu", name: "할 일", t: (r) => r.title,
+    seg: { k: "status", vals: ["미착수", "진행중", "완료", "보류"], open: (r) => r.status !== "완료" },
+    fields: [
+      { k: "title", l: "할 일", req: 1, full: 1 }, { k: "owner", l: "담당" }, { k: "due", l: "기한", ph: "즉시 / 다음 주 / 2026-12" },
+      { k: "status", l: "상태", en: ["미착수", "진행중", "완료", "보류"] }, { k: "priority", l: "우선순위", en: ["상", "중", "하"], def: "중" },
+      { k: "source", l: "근거", ph: "회의 11/05" }, { k: "note", l: "비고", area: 1, full: 1 }],
+    cols: [
+      { l: "ID", r: (r) => r.id, cls: "id" },
+      { l: "할 일", r: (r) => `${esc(r.title)}${r.note ? `<span class="cue">※ ${esc(r.note)}</span>` : ""}`, raw: 1 },
+      { l: "담당", r: (r) => r.owner, cls: "nw" }, { l: "기한", r: (r) => r.due, cls: "dt" },
+      { l: "우선", r: (r) => lv(r.priority), raw: 1 },
+      { l: "상태", r: (r) => quickSel("fu", r, "status"), raw: 1 },
+      { l: "", r: (r) => cmtBadge("fu", r.id), raw: 1 }],
+  },
+  inquiries: { ep: "inquiries", tt: "inquiry", name: "U+ 질의", t: (r) => r.title,
+    seg: { k: "status", vals: ["작성", "전달", "답변", "반영완료", "종결"], open: (r) => ["작성", "전달"].includes(r.status) },
+    fields: [
+      { k: "title", l: "질의", req: 1, full: 1 }, { k: "detail", l: "배경·상세", area: 1, full: 1 },
+      { k: "to_party", l: "대상", def: "U+ 시스템 구축 담당" }, { k: "owner", l: "담당" },
+      { k: "status", l: "상태", en: ["작성", "전달", "답변", "반영완료", "종결"] },
+      { k: "reqs", l: "관련 요구사항", ph: "R05,R08" }, { k: "fu_ref", l: "관련 할 일", ph: "F4" },
+      { k: "asked_at", l: "전달일", ph: "2026-11-12" }, { k: "answered_at", l: "답변일" },
+      { k: "answer", l: "답변", area: 1, full: 1 }],
+    cols: [
+      { l: "ID", r: (r) => r.id, cls: "id" },
+      { l: "질의", r: (r) => `${esc(r.title)}${r.answer ? `<span class="cue">답변: ${esc(r.answer)}</span>` : ""}`, raw: 1 },
+      { l: "요구사항", r: (r) => reqChips(r.reqs), raw: 1 },
+      { l: "전달일", r: (r) => r.asked_at || "-", cls: "dt" }, { l: "답변일", r: (r) => r.answered_at || "-", cls: "dt" },
+      { l: "상태", r: (r) => quickSel("inquiries", r, "status"), raw: 1 }],
+  },
+  decisions: { ep: "decisions", tt: "decision", name: "결정", t: (r) => r.title,
+    seg: { k: "status", vals: ["확정", "잠정", "번복"] },
+    fields: [
+      { k: "title", l: "결정", req: 1, full: 1 }, { k: "rationale", l: "근거", area: 1, full: 1 },
+      { k: "decided_at", l: "결정일", ph: "2026-11-05" }, { k: "source", l: "출처 회의", ph: "M20261105" },
+      { k: "status", l: "상태", en: ["확정", "잠정", "번복"] }, { k: "reqs", l: "관련 요구사항", ph: "R06" }],
+    cols: [
+      { l: "ID", r: (r) => r.id, cls: "id" },
+      { l: "결정", r: (r) => `${esc(r.title)}${r.rationale ? `<span class="cue">근거: ${esc(r.rationale)}</span>` : ""}`, raw: 1 },
+      { l: "결정일", r: (r) => r.decided_at, cls: "dt" },
+      { l: "출처", r: (r) => meetingChip(r.source), raw: 1 },
+      { l: "요구사항", r: (r) => reqChips(r.reqs), raw: 1 },
+      { l: "상태", r: (r) => lv(r.status), raw: 1 }],
+  },
+  issues: { ep: "issues", tt: "issue", name: "이슈·리스크", t: (r) => r.title,
+    seg: { k: "status", vals: ["열림", "대응중", "해소"], open: (r) => r.status !== "해소" },
+    fields: [
+      { k: "title", l: "제목", req: 1, full: 1 }, { k: "type", l: "구분", en: ["이슈", "리스크"] },
+      { k: "impact", l: "영향도", en: ["상", "중", "하"], def: "중" }, { k: "status", l: "상태", en: ["열림", "대응중", "해소"] },
+      { k: "owner", l: "담당" }, { k: "reqs", l: "관련 요구사항" }, { k: "action", l: "대응", area: 1, full: 1 }],
+    cols: [
+      { l: "ID", r: (r) => r.id, cls: "id" }, { l: "구분", r: (r) => lv(r.type), raw: 1 },
+      { l: "제목", r: (r) => `${esc(r.title)}${r.action ? `<span class="cue">대응: ${esc(r.action)}</span>` : ""}`, raw: 1 },
+      { l: "영향", r: (r) => lv(r.impact), raw: 1 }, { l: "담당", r: (r) => r.owner || "-", cls: "nw" },
+      { l: "상태", r: (r) => quickSel("issues", r, "status"), raw: 1 }],
+  },
+  requirements: { ep: "requirements", tt: "requirement", name: "요구사항", t: (r) => r.title,
+    seg: { k: "gap", vals: ["충족", "부분", "미충족", "확인필요"] },
+    fields: [
+      { k: "area", l: "영역", req: 1 }, { k: "source", l: "출처", ph: "회의 11/05" },
+      { k: "title", l: "요구사항", req: 1, full: 1 }, { k: "detail", l: "배경·근거", area: 1, full: 1 },
+      { k: "current_state", l: "세일즈올 현행 (가이드 기준)", area: 1, full: 1 }, { k: "guide_ref", l: "가이드 슬라이드", ph: "9,18" },
+      { k: "operators", l: "적용 사업자", multi: ["공통", "유모바일", "헬로모바일", "기타MVNO"], def: "공통", full: 1 },
+      { k: "scope", l: "범위", en: ["필수", "선택", "미정"], def: "미정" },
+      { k: "gap", l: "갭", en: ["충족", "부분", "미충족", "확인필요"], def: "확인필요" },
+      { k: "decision", l: "판단", en: ["결정", "요구", "미결", "제외"], def: "요구" },
+      { k: "priority", l: "우선순위", en: ["상", "중", "하"], def: "중" },
+      { k: "status", l: "진행", en: ["취합", "U+전달", "반영확정", "제외"], def: "취합" },
+      { k: "note", l: "비고", area: 1, full: 1 }],
+    cols: [
+      { l: "ID", r: (r) => r.id, cls: "id" }, { l: "영역", r: (r) => r.area, cls: "nw" },
+      { l: "요구사항", r: (r) => `<b style="font-weight:600">${esc(r.title)}</b><span class="cue">${esc(r.source)}</span>`, raw: 1 },
+      { l: "세일즈올 현행", r: (r) => `<span class="pre sm">${esc(r.current_state)}</span> ${slideChips(r.guide_ref)}`, raw: 1, cls: "sm" },
+      { l: "사업자", r: (r) => ids(r.operators).map((o) => `<span class="chn">${esc(o)}</span>`).join(""), raw: 1 },
+      { l: "범위", r: (r) => lv(r.scope), raw: 1 }, { l: "갭", r: (r) => lv(r.gap), raw: 1 },
+      { l: "판단", r: (r) => lv(r.decision), raw: 1 }, { l: "우선", r: (r) => lv(r.priority), raw: 1 }],
+  },
+  checks: { ep: "checks", tt: "check", name: "검증 항목", t: (r) => `${r.area} · ${r.item}`,
+    seg: { k: "result", vals: ["미확인", "정상", "이슈", "해당없음"] },
+    fields: [
+      { k: "area", l: "영역", req: 1 }, { k: "item", l: "확인 항목", req: 1, full: 1 }, { k: "reqs", l: "관련 요구사항" },
+      { k: "result", l: "결과", en: ["미확인", "정상", "이슈", "해당없음"] }, { k: "checked_by", l: "확인자" }, { k: "checked_at", l: "확인일" },
+      { k: "note", l: "확인 결과 메모", area: 1, full: 1 }],
+    cols: [
+      { l: "ID", r: (r) => r.id, cls: "id" }, { l: "영역", r: (r) => r.area, cls: "nw" },
+      { l: "확인 항목", r: (r) => `${esc(r.item)}${r.note ? `<span class="cue">※ ${esc(r.note)}</span>` : ""}`, raw: 1 },
+      { l: "요구사항", r: (r) => reqChips(r.reqs), raw: 1 },
+      { l: "확인", r: (r) => (r.checked_at ? `${esc(r.checked_at)}<span class="cue">${esc(r.checked_by)}</span>` : "-"), raw: 1, cls: "dt" },
+      { l: "결과", r: (r) => quickSel("checks", r, "result"), raw: 1 }],
+  },
+};
 
-function formHtml(fields, data = {}) {
-  return `<form class="form" id="frm">` + fields.map((f) => {
-    const v = data[f.k] ?? f.def ?? "";
-    let ctl;
-    if (f.enum) ctl = `<select name="${f.k}">${opts(f.enum, v)}</select>`;
-    else if (f.area) ctl = `<textarea name="${f.k}" rows="${f.rows || 3}">${esc(v)}</textarea>`;
-    else ctl = `<input type="text" name="${f.k}" value="${esc(v)}" ${f.req ? "required" : ""} placeholder="${esc(f.ph || "")}">`;
-    return `<label class="${f.full ? "full" : ""}">${esc(f.l)}${f.req ? " *" : ""}${ctl}</label>`;
-  }).join("") + `</form>`;
+// ================= 공통 조각 =================
+const reqChips = (s) => ids(s).map((x) => { const r = S.d.requirements.find((q) => q.id === x); return `<a class="chn" href="#/req/list/${x}" title="${esc(r ? r.title : "")}">${x}</a>`; }).join("");
+const slideChips = (s) => ids(s).map((n) => `<a class="chn" href="#/ref/guide/${n}">p.${n}</a>`).join("");
+const fuChips = (s) => ids(s).map((x) => `<a class="chn" href="#/run/fu/${x}">${x}</a>`).join("");
+const meetingChip = (id) => { const m = (S.content.meetings || []).find((x) => x.id === id); return m ? `<a class="chn" href="#/plan/meeting/${m.id}">${esc(m.date)}</a>` : esc(id); };
+const cmtBadge = (tt, id) => { const n = S.comments.filter((c) => c.target_type === E[tt].tt && c.target_id === id).length; return n ? `<span class="chn">💬 ${n}</span>` : ""; };
+function quickSel(key, r, k) {
+  const f = E[key].fields.find((x) => x.k === k);
+  if (!S.apiOk) return lv(r[k]);
+  return `<select class="field compact qs" data-key="${key}" data-id="${esc(r.id)}" data-k="${k}">${f.en.map((v) => `<option ${v === r[k] ? "selected" : ""}>${v}</option>`).join("")}</select>`;
 }
-function readForm(el) {
-  const o = {};
-  new FormData($("#frm", el)).forEach((v, k) => (o[k] = String(v)));
-  return o;
-}
-
-const FU_FIELDS = [
-  { k: "title", l: "할 일", req: true, full: true },
-  { k: "owner", l: "담당" }, { k: "due", l: "기한", ph: "즉시 / 다음 주 / 2026-12" },
-  { k: "status", l: "상태", enum: ENUM.fuStatus }, { k: "priority", l: "우선순위", enum: ENUM.priority, def: "중" },
-  { k: "source", l: "근거", ph: "회의 11/05" },
-  { k: "note", l: "비고", area: true, full: true },
-];
-const REQ_FIELDS = [
-  { k: "area", l: "영역", req: true }, { k: "source", l: "출처", ph: "회의 11/05 / 가이드 분석(제안)" },
-  { k: "title", l: "요구사항", req: true, full: true },
-  { k: "detail", l: "배경·근거", area: true, full: true },
-  { k: "current_state", l: "세일즈올 현행 (가이드 기준)", area: true, full: true },
-  { k: "guide_ref", l: "가이드 슬라이드", ph: "9,18" },
-  { k: "gap", l: "갭", enum: ENUM.gap, def: "확인필요" },
-  { k: "decision", l: "판단", enum: ENUM.decision, def: "요구" },
-  { k: "priority", l: "우선순위", enum: ENUM.priority, def: "중" },
-  { k: "status", l: "진행", enum: ENUM.reqStatus, def: "취합" },
-  { k: "note", l: "비고", area: true, full: true, rows: 2 },
-];
-
-function editModal(kind, row) {
-  const isFu = kind === "fu";
-  const fields = isFu ? FU_FIELDS : REQ_FIELDS;
-  const ep = isFu ? "fu" : "requirements";
-  const title = (row ? row.id + " 수정" : "신규 등록") + (isFu ? " — F/U" : " — 요구사항");
-  openModal(title, formHtml(fields, row || {}) + `
-    <div class="form-actions">
-      ${row ? `<button class="btn danger" id="del">삭제</button><span class="sp"></span>` : ""}
-      <button class="btn" data-close>취소</button><button class="btn pri" id="save">저장</button>
-    </div>`, (el) => {
-    $("#save", el).onclick = async () => {
-      const body = readForm(el);
-      if (fields.some((f) => f.req && !body[f.k].trim())) return toast("필수 항목 입력 필요");
-      try {
-        await api(row ? `${ep}/${encodeURIComponent(row.id)}` : ep, { method: row ? "PATCH" : "POST", body });
-        await reload(isFu ? "fu" : "req"); closeModal(); toast("저장 완료"); render();
-      } catch (e) { toast("저장 실패: " + e.message); }
-    };
-    const d = $("#del", el);
-    if (d) d.onclick = async () => {
-      if (!confirm(`${row.id} 삭제`)) return;
-      try { await api(`${ep}/${encodeURIComponent(row.id)}`, { method: "DELETE" }); await reload(isFu ? "fu" : "req"); closeModal(); toast("삭제 완료"); location.hash = isFu ? "#/fu" : "#/req"; render(); }
-      catch (e) { toast("삭제 실패: " + e.message); }
+function bindQuick(root) {
+  root.querySelectorAll(".qs").forEach((s) => {
+    s.onclick = (e) => e.stopPropagation();
+    s.onchange = async () => {
+      const body = { [s.dataset.k]: s.value };
+      if (s.dataset.key === "checks") Object.assign(body, { checked_by: S.me, checked_at: today() });
+      if (s.dataset.key === "inquiries" && s.value === "전달") { const r = S.d.inquiries.find((x) => x.id === s.dataset.id); if (r && !r.asked_at) body.asked_at = today(); }
+      if (s.dataset.key === "inquiries" && s.value === "답변") { const r = S.d.inquiries.find((x) => x.id === s.dataset.id); if (r && !r.answered_at) body.answered_at = today(); }
+      try { await api(`${E[s.dataset.key].ep}/${encodeURIComponent(s.dataset.id)}`, { method: "PATCH", body }); await reload(s.dataset.key); toast(`${s.dataset.id} → ${s.value}`); render(); }
+      catch (e) { toast("변경 실패: " + e.message); }
     };
   });
 }
+function donut(segs, center, sub) {
+  const total = segs.reduce((a, s) => a + s.n, 0) || 1, R = 70, C = 2 * Math.PI * R;
+  let off = 0;
+  const arcs = segs.filter((s) => s.n).map((s) => { const len = (s.n / total) * C; const a = `<circle r="${R}" cx="90" cy="90" fill="none" stroke="var(${s.c})" stroke-width="22" stroke-dasharray="${Math.max(len - 2, 0)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 90 90)"/>`; off += len; return a; }).join("");
+  return `<div class="donut-box"><svg viewBox="0 0 180 180"><circle r="${R}" cx="90" cy="90" fill="none" stroke="var(--grid)" stroke-width="22"/>${arcs}</svg><div class="donut-c"><div class="t">${center}</div><div class="s">${sub}</div></div></div>
+  <div class="dlegend">${segs.map((s) => `<a class="dl" href="${s.href || "#"}"><span class="chip" style="background:var(${s.c})"></span>${esc(s.l)}<b>${s.n}</b><span class="p">${((s.n / total) * 100).toFixed(0)}%</span></a>`).join("")}</div>`;
+}
+const stack = (obj, order) => { const t = Object.values(obj).reduce((a, b) => a + b, 0) || 1; return `<div class="stackbar">${order.map(([k, c]) => `<i style="width:${((obj[k] || 0) / t) * 100}%;background:var(${c})"></i>`).join("")}</div>`; };
+const card = (title, desc, body, r = "") => `<section class="card"><div class="card-h"><h2>${title}</h2>${desc ? `<span class="desc">${desc}</span>` : ""}${r ? `<div class="r">${r}</div>` : ""}</div>${body}</section>`;
+const table = (head, rows, empty = "데이터 없음") => `<div class="table-scroll"><table><thead><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("") || `<tr><td class="empty" colspan="${head.length}">${empty}</td></tr>`}</tbody></table></div>`;
 
-// ---------- 피드백 스레드 ----------
-function threadHtml(list, opt = {}) {
-  if (!list.length) return `<div class="empty">등록된 피드백 없음</div>`;
-  return `<div class="thread">` + list.map((f) => `
-    <div class="fb" data-id="${f.id}">
-      <div class="meta">${tag(f.category)} ${tag(f.status)}
-        ${opt.showTarget ? `<span class="chip-link">${esc(TARGET_LABEL[f.target_type] || f.target_type)}${f.target_id ? " · " + esc(f.target_id) : ""}</span>` : ""}
-        <span>${esc(f.author)}</span><span>${esc(toKST(f.created_at))}</span><span class="sp"></span>
-        ${S.apiOk ? `<button class="btn sm ghost" data-fb-edit="${f.id}">처리</button>` : ""}
-      </div>
-      <div class="body">${esc(f.body)}</div>
-      ${f.reply ? `<div class="reply"><b>답변</b> ${esc(f.reply)}</div>` : ""}
-    </div>`).join("") + `</div>`;
+// ================= 폼 =================
+function formHtml(key, row) {
+  const fs = E[key].fields;
+  return `<div class="form" id="frm">` + fs.map((f) => {
+    const v = row ? row[f.k] ?? "" : f.def ?? "";
+    let ctl;
+    if (f.en) ctl = `<select class="field" name="${f.k}">${f.en.map((o) => `<option ${o === v ? "selected" : ""}>${o}</option>`).join("")}</select>`;
+    else if (f.multi) ctl = `<div class="checks">${f.multi.map((o) => `<label><input type="checkbox" name="${f.k}" value="${o}" ${ids(v).includes(o) ? "checked" : ""}>${o}</label>`).join("")}</div>`;
+    else if (f.area) ctl = `<textarea class="field" name="${f.k}">${esc(v)}</textarea>`;
+    else ctl = `<input class="field" name="${f.k}" value="${esc(v)}" placeholder="${esc(f.ph || "")}">`;
+    return `<div class="${f.full ? "full" : ""}"><label>${esc(f.l)}${f.req ? " *" : ""}</label>${ctl}</div>`;
+  }).join("") + `<div class="act full"><span class="msg" id="fmsg"></span>${row ? `<button class="btn danger" id="fDel">삭제</button>` : ""}<button class="btn" id="fCancel">취소</button><button class="btn primary" id="fSave">저장</button></div></div>`;
 }
-function fbFormHtml(target) {
-  return `<div class="card mt"><h2>피드백 등록</h2>
-    <div class="form">
-      ${target ? "" : `<label>대상<select id="fbTT">${Object.entries(TARGET_LABEL).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></label>
-      <label>대상 ID<input type="text" id="fbTI" placeholder="R01 / F3 / p.9"></label>`}
-      <label>구분<select id="fbCat">${opts(ENUM.fbCat)}</select></label>
-      <label class="full">내용<textarea id="fbBody" placeholder="의견·질문·이슈 입력"></textarea></label>
-    </div>
-    <div class="form-actions"><button class="btn pri" id="fbSend" ${S.apiOk ? "" : "disabled"}>등록</button></div></div>`;
+function readForm(key) {
+  const o = {}, el = $("#frm");
+  for (const f of E[key].fields) {
+    if (f.multi) o[f.k] = [...el.querySelectorAll(`input[name="${f.k}"]:checked`)].map((x) => x.value).join(",");
+    else o[f.k] = el.querySelector(`[name="${f.k}"]`).value;
+  }
+  return o;
 }
-function bindFb(root, target) {
-  const send = $("#fbSend", root);
-  if (send) send.onclick = async () => {
-    const body = $("#fbBody", root).value.trim();
-    if (!body) return toast("내용 입력 필요");
-    const payload = target
-      ? { ...target, category: $("#fbCat", root).value, body }
-      : { target_type: $("#fbTT", root).value, target_id: $("#fbTI", root).value.trim(), category: $("#fbCat", root).value, body };
-    try { await api("feedback", { method: "POST", body: payload }); await reload("fb"); toast("등록 완료"); render(); }
-    catch (e) { toast("등록 실패: " + e.message); }
+function bindForm(key, row, done) {
+  document.querySelectorAll('#frm input[name="operators"]').forEach((cb) => (cb.onchange = () => {
+    if (!cb.checked) return;
+    document.querySelectorAll('#frm input[name="operators"]').forEach((o) => { if (o !== cb && (cb.value === "공통" || o.value === "공통")) o.checked = false; });
+  }));
+  $("#fCancel").onclick = () => { S.form = null; render(); };
+  $("#fSave").onclick = async () => {
+    const body = readForm(key);
+    const miss = E[key].fields.find((f) => f.req && !String(body[f.k]).trim());
+    if (miss) return ($("#fmsg").textContent = `${miss.l} 입력 필요`);
+    if (body.operators !== undefined && !body.operators) return ($("#fmsg").textContent = "적용 사업자 1개 이상 선택");
+    try {
+      const r = await api(row ? `${E[key].ep}/${encodeURIComponent(row.id)}` : E[key].ep, { method: row ? "PATCH" : "POST", body });
+      await reload(key); S.form = null; toast(`${r.id} 저장`); done ? done(r) : render();
+    } catch (e) { $("#fmsg").textContent = "저장 실패: " + e.message; }
   };
-  root.querySelectorAll("[data-fb-edit]").forEach((b) => (b.onclick = () => {
-    const f = S.fb.find((x) => String(x.id) === b.dataset.fbEdit);
-    openModal(`피드백 #${f.id} 처리`, `
-      <div class="fb"><div class="meta">${tag(f.category)} ${esc(f.author)} · ${esc(toKST(f.created_at))}</div><div class="body">${esc(f.body)}</div></div>
-      <div class="form mt"><label>상태<select id="eSt">${opts(ENUM.fbStatus, f.status)}</select></label>
-      <label>구분<select id="eCat">${opts(ENUM.fbCat, f.category)}</select></label>
-      <label class="full">답변·처리 내용<textarea id="eRep">${esc(f.reply)}</textarea></label></div>
-      <div class="form-actions"><button class="btn danger" id="eDel">삭제</button><span class="sp"></span><button class="btn" data-close>취소</button><button class="btn pri" id="eSave">저장</button></div>`, (el) => {
-      $("#eSave", el).onclick = async () => {
-        try { await api("feedback/" + f.id, { method: "PATCH", body: { status: $("#eSt", el).value, category: $("#eCat", el).value, reply: $("#eRep", el).value } }); await reload("fb"); closeModal(); toast("저장 완료"); render(); }
-        catch (e) { toast("저장 실패: " + e.message); }
-      };
-      $("#eDel", el).onclick = async () => {
-        if (!confirm("피드백 삭제")) return;
-        await api("feedback/" + f.id, { method: "DELETE" }); await reload("fb"); closeModal(); render();
-      };
-    });
+  const d = $("#fDel");
+  if (d) d.onclick = async () => {
+    if (!confirm(`${row.id} 삭제`)) return;
+    try { await api(`${E[key].ep}/${encodeURIComponent(row.id)}`, { method: "DELETE" }); await reload(key); S.form = null; toast(`${row.id} 삭제`); history.back(); }
+    catch (e) { $("#fmsg").textContent = "삭제 실패: " + e.message; }
+  };
+}
+
+// ================= 코멘트 =================
+function comments(tt, id) {
+  const list = S.comments.filter((c) => c.target_type === tt && c.target_id === id);
+  const body = (list.length ? list.map((c) => `<div class="cmt"><div class="mh"><b>${esc(c.author)}</b><span>${esc(toKST(c.created_at))}</span>${c.category && c.category !== "코멘트" ? lv(c.category) : ""}${S.apiOk ? `<span class="spacer"></span><button class="btn sm ghost" data-cdel="${c.id}">삭제</button>` : ""}</div><div class="bd">${esc(c.body)}</div>${c.reply ? `<div class="rp">답변 · ${esc(c.reply)}</div>` : ""}</div>`).join("") : `<div class="empty">코멘트 없음</div>`)
+    + (S.apiOk ? `<div class="form" style="margin-top:14px"><div class="full"><textarea class="field" id="cBody" placeholder="코멘트 입력"></textarea></div><div class="act full"><button class="btn primary" id="cSend">등록</button></div></div>` : "");
+  return card("코멘트", `${list.length}건`, body);
+}
+function bindComments(tt, id) {
+  const send = $("#cSend");
+  if (send) send.onclick = async () => {
+    const b = $("#cBody").value.trim(); if (!b) return toast("내용 입력 필요");
+    try { await api("comments", { method: "POST", body: { target_type: tt, target_id: id, body: b } }); await reload("comments"); render(); } catch (e) { toast("등록 실패: " + e.message); }
+  };
+  document.querySelectorAll("[data-cdel]").forEach((btn) => (btn.onclick = async () => {
+    if (!confirm("코멘트 삭제")) return;
+    await api("comments/" + btn.dataset.cdel, { method: "DELETE" }); await reload("comments"); render();
   }));
 }
 
-// ---------- pages ----------
-const PAGES = {};
-
-PAGES.dashboard = async (v) => {
-  const C = S.content, P = C.project;
-  const fuC = count(S.fu, "status"), gapC = count(S.req, "gap"), decC = count(S.req, "decision"), fbC = count(S.fb, "status");
-  const fuOpen = S.fu.filter((f) => f.status !== "완료");
-  const nextFu = fuOpen.filter((f) => f.priority === "상").concat(fuOpen.filter((f) => f.priority !== "상")).slice(0, 6);
-  const seg = (obj, keys, cls) => keys.map((k, i) => `<i style="width:${((obj[k] || 0) / Math.max(1, Object.values(obj).reduce((a, b) => a + b, 0))) * 100}%;background:var(--${cls[i]})"></i>`).join("");
-  let recent = [];
-  if (S.apiOk) try { recent = (await api("summary")).recent; } catch {}
-  v.innerHTML = `
-  <div class="card"><div class="row"><div>
-    <div class="muted" style="font-size:12.5px">기준일 ${esc(P.baseDate)} · 현 단계</div>
-    <div style="font-size:20px;font-weight:700;margin:2px 0">${esc(P.phase)} <span class="tag t-pri">${esc(P.phaseNote)}</span></div>
-    <div class="tx2">${esc(P.goal)} · 대상 ${esc(P.targets)}</div>
-    <div class="muted mt8">방향: ${esc(P.direction)}</div></div></div></div>
-  <div class="grid g4 mt">
-    <div class="card kpi"><div class="lbl">F/U 미완료</div><div class="num">${fuOpen.length}<span class="muted" style="font-size:15px"> / ${S.fu.length}</span></div>
-      <div class="hint">진행중 ${fuC["진행중"] || 0} · 보류 ${fuC["보류"] || 0}</div><div class="bar">${seg(fuC, ["완료", "진행중", "보류"], ["ok", "info", "warn"])}</div></div>
-    <div class="card kpi"><div class="lbl">요구사항</div><div class="num">${S.req.length}</div>
-      <div class="hint">결정 ${decC["결정"] || 0} · 요구 ${decC["요구"] || 0} · 미결 ${decC["미결"] || 0}</div></div>
-    <div class="card kpi"><div class="lbl">세일즈올 현행 대비 갭</div><div class="num">${(gapC["미충족"] || 0) + (gapC["부분"] || 0)}<span class="muted" style="font-size:15px"> 건</span></div>
-      <div class="hint">미충족 ${gapC["미충족"] || 0} · 부분 ${gapC["부분"] || 0} · 확인필요 ${gapC["확인필요"] || 0}</div>
-      <div class="bar">${seg(gapC, ["충족", "부분", "미충족", "확인필요"], ["ok", "warn", "bad", "info"])}</div></div>
-    <div class="card kpi"><div class="lbl">피드백 미처리</div><div class="num">${(fbC["접수"] || 0) + (fbC["검토중"] || 0)}</div>
-      <div class="hint">전체 ${S.fb.length} · 완료 ${fbC["완료"] || 0}</div></div>
-  </div>
-  <div class="grid g2 mt">
-    <div class="card"><h2>일정 <span class="sub">U+ 로드맵 포함</span></h2><ul class="tl">
-      ${C.schedule.map((s) => `<li><span class="dot ${s.state}"></span><span class="d">${esc(s.date)}</span><div>${esc(s.title)} ${s.kind === "U+ 로드맵" ? '<span class="tag t-info">U+</span>' : ""}${s.note ? `<span class="cue muted">※ ${esc(s.note)}</span>` : ""}</div></li>`).join("")}
-    </ul></div>
-    <div class="card"><h2>우선 F/U <span class="sub">미완료 · 우선순위순</span><span class="sp"></span><a href="#/fu" class="btn sm">전체</a></h2>
-      ${nextFu.length ? `<ul class="tl">${nextFu.map((f) => `<li><span class="d id">${esc(f.id)}</span><div>${esc(f.title)}<span class="cue">${esc(f.owner)} · ${esc(f.due)}</span></div><div>${tag(f.status)}</div></li>`).join("")}</ul>` : `<div class="empty">${S.apiOk ? "미완료 F/U 없음" : "D1 연결 필요"}</div>`}
-      <h2 class="mt">리스크·확인 필요</h2><ul class="plain">${C.risks.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>
-    </div>
-  </div>
-  <div class="card mt"><h2>최근 변경 <span class="sp"></span><a href="#/log" class="btn sm">전체</a></h2>
-    ${recent.length ? logTable(recent) : `<div class="empty">변경 이력 없음</div>`}</div>`;
-};
-
-PAGES.fu = (v) => {
-  const f = PAGES.fu.f || (PAGES.fu.f = { status: "", q: "" });
-  const rows = S.fu.filter((r) => (!f.status || (f.status === "_open" ? r.status !== "완료" : r.status === f.status)) && (!f.q || JSON.stringify(r).includes(f.q)));
-  $("#topActions").innerHTML = S.apiOk ? `<button class="btn pri" id="addFu">+ F/U 등록</button>` : "";
-  v.innerHTML = `
-  <div class="filters">
-    <select id="fSt"><option value="">상태 전체</option><option value="_open" ${f.status === "_open" ? "selected" : ""}>미완료</option>${opts(ENUM.fuStatus, f.status)}</select>
-    <input type="search" id="fQ" placeholder="검색" value="${esc(f.q)}">
-    <span class="sp"></span><span class="muted">${rows.length}건</span>
-  </div>
-  <div class="tbl-wrap"><table><thead><tr><th>ID</th><th>할 일</th><th>담당</th><th>기한</th><th>우선</th><th>상태</th><th>피드백</th></tr></thead><tbody>
-  ${rows.map((r) => { const n = S.fb.filter((x) => x.target_type === "fu" && x.target_id === r.id).length; return `
-    <tr class="click" data-id="${esc(r.id)}"><td class="id">${esc(r.id)}</td>
-    <td>${esc(r.title)}${r.note ? `<span class="cue">※ ${esc(r.note)}</span>` : ""}${r.source ? `<span class="cue">근거: ${esc(r.source)}</span>` : ""}</td>
-    <td>${esc(r.owner)}</td><td style="white-space:nowrap">${esc(r.due)}</td><td>${tag(r.priority)}</td>
-    <td>${S.apiOk ? `<select class="inline-st" data-id="${esc(r.id)}" style="width:auto">${opts(ENUM.fuStatus, r.status)}</select>` : tag(r.status)}</td>
-    <td>${n ? `<span class="tag">${n}</span>` : ""}</td></tr>`; }).join("") || `<tr><td colspan="7" class="empty">${S.apiOk ? "해당 F/U 없음" : "D1 연결 필요"}</td></tr>`}
-  </tbody></table></div>
-  <p class="muted mt8">행 클릭: 상세·수정 · 상태는 목록에서 바로 변경</p>`;
-  $("#fSt").onchange = (e) => { f.status = e.target.value; render(); };
-  $("#fQ").oninput = (e) => { f.q = e.target.value; clearTimeout(PAGES.fu.t); PAGES.fu.t = setTimeout(() => { render(); const q = $("#fQ"); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }, 250); };
-  const add = $("#addFu"); if (add) add.onclick = () => editModal("fu");
-  v.querySelectorAll(".inline-st").forEach((s) => { s.onclick = (e) => e.stopPropagation(); s.onchange = async (e) => {
-    try { await api("fu/" + encodeURIComponent(s.dataset.id), { method: "PATCH", body: { status: e.target.value } }); await reload("fu"); toast(`${s.dataset.id} → ${e.target.value}`); render(); } catch (er) { toast("변경 실패: " + er.message); }
-  }; });
-  v.querySelectorAll("tr.click").forEach((tr) => (tr.onclick = () => (location.hash = "#/fu/" + tr.dataset.id)));
-};
-
-PAGES.fuDetail = (v, id) => detailPage(v, "fu", S.fu.find((r) => r.id === id), id);
-
-PAGES.req = (v) => {
-  const f = PAGES.req.f || (PAGES.req.f = { area: "", gap: "", decision: "", source: "", q: "" });
-  const areas = [...new Set(S.req.map((r) => r.area))];
-  const sources = [...new Set(S.req.map((r) => r.source))];
-  const rows = S.req.filter((r) => (!f.area || r.area === f.area) && (!f.gap || r.gap === f.gap) && (!f.decision || r.decision === f.decision) && (!f.source || r.source === f.source) && (!f.q || JSON.stringify(r).includes(f.q)));
-  $("#topActions").innerHTML = S.apiOk ? `<button class="btn" id="csv">CSV</button><button class="btn pri" id="addReq">+ 요구사항</button>` : "";
-  v.innerHTML = `
-  <div class="filters">
-    <select data-k="area">${opts(areas, f.area, "영역 전체")}</select>
-    <select data-k="gap">${opts(ENUM.gap, f.gap, "갭 전체")}</select>
-    <select data-k="decision">${opts(ENUM.decision, f.decision, "판단 전체")}</select>
-    <select data-k="source">${opts(sources, f.source, "출처 전체")}</select>
-    <input type="search" id="rQ" placeholder="검색" value="${esc(f.q)}">
-    <span class="sp"></span><span class="muted">${rows.length}건</span>
-  </div>
-  <div class="tbl-wrap"><table><thead><tr><th>ID</th><th>영역</th><th>요구사항</th><th>세일즈올 현행</th><th>갭</th><th>판단</th><th>우선</th><th>진행</th></tr></thead><tbody>
-  ${rows.map((r) => `<tr class="click" data-id="${esc(r.id)}"><td class="id">${esc(r.id)}</td><td style="white-space:nowrap">${esc(r.area)}</td>
-    <td><b style="font-weight:600">${esc(r.title)}</b><span class="cue">${esc(r.source)}</span></td>
-    <td class="tx2" style="font-size:13px;min-width:240px"><span class="pre">${esc(r.current_state)}</span> ${slideLinks(r.guide_ref)}</td>
-    <td>${tag(r.gap)}</td><td>${tag(r.decision)}</td><td>${tag(r.priority)}</td><td>${tag(r.status)}</td></tr>`).join("") || `<tr><td colspan="8" class="empty">${S.apiOk ? "해당 요구사항 없음" : "D1 연결 필요"}</td></tr>`}
-  </tbody></table></div>
-  <p class="muted mt8">갭: 세일즈올 가이드(2026.02) 기준 현행 기능 대비 판단 · '가이드 분석(제안)'·'크로스 분석(제안)'은 회의 외 추가 검토 항목</p>`;
-  v.querySelectorAll(".filters select[data-k]").forEach((s) => (s.onchange = () => { f[s.dataset.k] = s.value; render(); }));
-  $("#rQ").oninput = (e) => { f.q = e.target.value; clearTimeout(PAGES.req.t); PAGES.req.t = setTimeout(() => { render(); const q = $("#rQ"); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }, 250); };
-  const add = $("#addReq"); if (add) add.onclick = () => editModal("req");
-  const csv = $("#csv"); if (csv) csv.onclick = () => downloadCsv(rows);
-  v.querySelectorAll("tr.click").forEach((tr) => (tr.onclick = (e) => { if (e.target.closest("a")) return; location.hash = "#/req/" + tr.dataset.id; }));
-};
-
-function downloadCsv(rows) {
-  const cols = ["id", "area", "title", "detail", "source", "current_state", "guide_ref", "gap", "decision", "priority", "status", "note", "updated_at", "updated_by"];
-  const head = ["ID", "영역", "요구사항", "배경·근거", "출처", "세일즈올 현행", "가이드", "갭", "판단", "우선", "진행", "비고", "수정일(UTC)", "수정자"];
-  const line = (a) => a.map((x) => `"${String(x ?? "").replace(/"/g, '""')}"`).join(",");
-  const csv = "﻿" + [line(head), ...rows.map((r) => line(cols.map((c) => r[c])))].join("\r\n");
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-  a.download = `요구사항_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+// ================= 범용 목록·상세 =================
+const F = {}; // 페이지별 필터 상태
+function listPage(m, key, base, opt = {}) {
+  const e = E[key], rows0 = S.d[key];
+  const f = (F[key] = F[key] || { seg: e.seg.open ? "_open" : "", q: "", x: {} });
+  const segC = count(rows0, e.seg.k);
+  let rows = rows0.filter((r) => (!f.seg || (f.seg === "_open" ? e.seg.open(r) : r[e.seg.k] === f.seg)) && (!f.q || JSON.stringify(r).includes(f.q)));
+  for (const [k, v] of Object.entries(f.x)) if (v) rows = rows.filter((r) => (k === "operators" ? ids(r.operators).includes(v) || r.operators === "공통" : r[k] === v));
+  const segBtns = [...(e.seg.open ? [["_open", "미완료", rows0.filter(e.seg.open).length]] : []), ["", "전체", rows0.length], ...e.seg.vals.map((v) => [v, v, segC[v] || 0])]
+    .map(([v, l, n]) => `<button data-seg="${v}" aria-pressed="${f.seg === v}">${l}<span class="n">${n}</span></button>`).join("");
+  const extra = (opt.selects || []).map(([k, l, vals]) => `<select class="field compact" data-x="${k}"><option value="">${l} 전체</option>${vals.map((v) => `<option ${f.x[k] === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>`).join("");
+  const formCard = S.form && S.form.key === key && !S.form.row ? card(`${e.name} 등록`, "", formHtml(key, null)) : "";
+  m.innerHTML = (opt.lead ? `<p class="lead">${opt.lead}</p>` : "") + formCard + card(opt.title || e.name, opt.desc || "", `
+    <div class="toolbar"><div class="seg">${segBtns}</div>${extra}<input class="field" type="search" id="lq" placeholder="검색" value="${esc(f.q)}">${opt.tools || ""}<span class="count">${rows.length}건</span></div>
+    ${table(e.cols.map((c) => c.l), rows.map((r) => `<tr class="click" data-id="${esc(r.id)}">${e.cols.map((c) => `<td class="${c.cls || ""}">${c.raw ? c.r(r) : esc(c.r(r))}</td>`).join("")}</tr>`), S.apiOk ? "해당 항목 없음" : "D1 연결 필요")}`);
+  m.querySelectorAll("[data-seg]").forEach((b) => (b.onclick = () => { f.seg = b.dataset.seg; render(); }));
+  m.querySelectorAll("[data-x]").forEach((s) => (s.onchange = () => { f.x[s.dataset.x] = s.value; render(); }));
+  $("#lq").oninput = (ev) => { f.q = ev.target.value; clearTimeout(F._t); F._t = setTimeout(() => { render(); const q = $("#lq"); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }, 250); };
+  m.querySelectorAll("tr.click").forEach((tr) => (tr.onclick = () => (location.hash = `${base}/${tr.dataset.id}`)));
+  bindQuick(m);
+  if (formCard) bindForm(key, null, (r) => (location.hash = `${base}/${r.id}`));
+  opt.after && opt.after(m, rows);
+}
+function detailPage(m, key, id, base, extraFn) {
+  const e = E[key], r = S.d[key].find((x) => x.id === id);
+  if (!r) { m.innerHTML = card(esc(id), "", `<div class="empty">항목 없음 · <a href="${base}">목록</a></div>`); return; }
+  const editing = S.form && S.form.key === key && S.form.row === id;
+  const enumF = e.fields.filter((f) => f.en);
+  const kvF = e.fields.filter((f) => !f.en && !f.req || (f.req && f.k !== "title" && f.k !== "item"));
+  const val = (f) => {
+    const v = r[f.k];
+    if (f.k === "reqs") return reqChips(v) || "-";
+    if (f.k === "guide_ref") return slideChips(v) || "-";
+    if (f.k === "fu_ref") return fuChips(v) || "-";
+    if (f.k === "source" && key === "decisions") return meetingChip(v);
+    if (f.multi) return ids(v).map((o) => `<span class="chn">${esc(o)}</span>`).join("");
+    return esc(v || "-");
+  };
+  const main = editing ? card(`${r.id} 수정`, "", formHtml(key, r)) : card(`<span class="muted" style="font-weight:600">${r.id}</span> ${esc(e.t(r))}`, "", `
+    <div class="badges">${enumF.map((f) => (r[f.k] ? `<span class="lv lv-${toneOf(r[f.k])}"><span class="chip"></span><span style="opacity:.65;font-weight:600">${esc(f.l)}</span>${esc(r[f.k])}</span>` : "")).join("")}</div>
+    <dl class="kv">${kvF.map((f) => `<dt>${esc(f.l)}</dt><dd>${val(f)}</dd>`).join("")}<dt>최종 수정</dt><dd>${esc(toKST(r.updated_at))} · ${esc(r.updated_by)}</dd></dl>`,
+    `<a class="btn sm" href="${base}">목록</a>${S.apiOk ? `<button class="btn sm primary" id="edit">수정</button>` : ""}`);
+  m.innerHTML = `<div class="duo"><div>${main}${extraFn ? extraFn(r) : ""}</div><div>${comments(e.tt, r.id)}</div></div>`;
+  const ed = $("#edit"); if (ed) ed.onclick = () => { S.form = { key, row: id }; render(); };
+  if (editing) bindForm(key, r);
+  bindComments(e.tt, r.id);
+}
+function relatedReqCard(r) {
+  // 요구사항 상세 하단: 연결 객체
+  const has = (x) => ids(x.reqs).includes(r.id);
+  const q = S.d.inquiries.filter(has), d = S.d.decisions.filter(has), i = S.d.issues.filter(has), c = S.d.checks.filter(has);
+  const sl = ids(r.guide_ref);
+  const row = (key, base, x) => `<tr class="click" onclick="location.hash='${base}/${x.id}'"><td class="id">${x.id}</td><td>${esc(E[key].t(x))}</td><td>${lv(x.status || x.result)}</td></tr>`;
+  const blocks = [["U+ 질의", "inquiries", "#/run/inq", q], ["결정", "decisions", "#/run/dec", d], ["이슈·리스크", "issues", "#/run/issue", i], ["검증 항목", "checks", "#/req/check", c]]
+    .filter((b) => b[3].length).map(([l, k, b, arr]) => `<div class="sub-h">${l}</div><table><tbody>${arr.map((x) => row(k, b, x)).join("")}</tbody></table>`).join("");
+  return card("연결 항목", "질의·결정·이슈·검증·가이드", (blocks || `<div class="muted" style="font-size:13px">연결된 질의·결정·이슈·검증 항목 없음</div>`)
+    + (sl.length ? `<div class="sub-h">가이드 화면</div><div class="thumbs">${sl.map((n) => { const s = S.content.guide.slides[n - 1]; return s ? `<a class="thumb" href="#/ref/guide/${n}"><img loading="lazy" src="${s.img}" alt=""><span>p.${n} ${esc(s.title)}</span></a>` : ""; }).join("")}</div>` : ""));
 }
 
-PAGES.reqDetail = (v, id) => detailPage(v, "req", S.req.find((r) => r.id === id), id);
+// ================= 화면 =================
+const P = {};
 
-function detailPage(v, kind, r, id) {
-  const isFu = kind === "fu";
-  if (!r) { v.innerHTML = `<div class="empty">${esc(id)} 없음 <a href="#/${isFu ? "fu" : "req"}">목록</a></div>`; return; }
-  $("#pageTitle").textContent = `${r.id} · ${isFu ? "F/U" : "요구사항"}`;
-  $("#topActions").innerHTML = `<a class="btn" href="#/${isFu ? "fu" : "req"}">목록</a>${S.apiOk ? `<button class="btn pri" id="edit">수정</button>` : ""}`;
-  const fv = (k, val, html) => (val || html ? `<div class="fieldv"><div class="k">${k}</div><div class="pre">${html || esc(val)}</div></div>` : "");
-  const tt = isFu ? "fu" : "requirement";
-  const list = S.fb.filter((x) => x.target_type === tt && x.target_id === r.id);
-  const slides = String(r.guide_ref || "").split(",").map((s) => s.trim()).filter(Boolean);
-  v.innerHTML = `<div class="detail-grid">
-    <div><div class="card">
-      <h2 style="font-size:17px">${esc(r.title)}</h2>
-      <div class="row" style="margin-bottom:14px">${isFu ? tag(r.status) + tag(r.priority) : tag(r.gap) + tag(r.decision) + tag(r.priority) + tag(r.status)}</div>
-      ${isFu ? fv("담당", r.owner) + fv("기한", r.due) + fv("근거", r.source) + fv("비고", r.note)
-        : fv("영역", r.area) + fv("출처", r.source) + fv("배경·근거", r.detail) + fv("세일즈올 현행 (가이드 기준)", r.current_state) + fv("가이드 슬라이드", "", slideLinks(r.guide_ref)) + fv("비고", r.note)}
-      <div class="muted" style="font-size:12px">최종 수정 ${esc(toKST(r.updated_at))} · ${esc(r.updated_by)}</div>
+P.home = (m) => {
+  const C = S.content, pj = C.project, d = S.d;
+  const fuOpen = d.fu.filter((x) => x.status !== "완료"), fuC = count(d.fu, "status");
+  const qOpen = d.inquiries.filter((x) => ["작성", "전달"].includes(x.status)), qC = count(d.inquiries, "status");
+  const iOpen = d.issues.filter((x) => x.status !== "해소");
+  const gapC = count(d.requirements, "gap");
+  const next = C.schedule.find((s) => s.state === "next") || {};
+  const cur = (C.phases || []).find((p) => p.state === "current") || {};
+  const top = fuOpen.slice().sort((a, b) => "상중하".indexOf(a.priority) - "상중하".indexOf(b.priority)).slice(0, 6);
+  m.innerHTML = (S.apiOk ? "" : `<div class="banner">API·D1 연결 실패 — 정적 콘텐츠만 표시 (${esc(S.apiErr || "")})</div>`) + `
+  <div class="tiles">
+    <a class="tile hero" href="#/plan/milestone"><div class="lbl">현 단계<span class="ic">${ICON.flag}</span></div><div class="val">${esc(cur.name || pj.phase)}</div><div class="sub">다음 · ${esc(next.date || "")} ${esc(next.title || "")}</div></a>
+    <a class="tile" href="#/run/fu"><div class="lbl">할 일 미완료<span class="ic">${ICON.list}</span></div><div class="val num">${fuOpen.length}<small> / ${d.fu.length}</small></div><div class="sub">진행중 ${fuC["진행중"] || 0} · 보류 ${fuC["보류"] || 0} · 완료 ${fuC["완료"] || 0}</div>${stack(fuC, [["완료", "--lv-ok"], ["진행중", "--c7"], ["보류", "--lv-warn"]])}</a>
+    <a class="tile" href="#/run/inq"><div class="lbl">U+ 질의 미답변<span class="ic">${ICON.q}</span></div><div class="val num">${qOpen.length}<small> / ${d.inquiries.length}</small></div><div class="sub">작성 ${qC["작성"] || 0} · 전달 ${qC["전달"] || 0} · 답변 ${qC["답변"] || 0}</div>${stack(qC, [["반영완료", "--lv-ok"], ["답변", "--c3"], ["전달", "--c7"], ["작성", "--baseline"]])}</a>
+    <a class="tile" href="#/run/issue"><div class="lbl">열린 이슈·리스크<span class="ic">${ICON.alert}</span></div><div class="val num">${iOpen.length}</div><div class="sub">영향 상 ${iOpen.filter((x) => x.impact === "상").length} · 중 ${iOpen.filter((x) => x.impact === "중").length} · 하 ${iOpen.filter((x) => x.impact === "하").length}</div></a>
+  </div>
+  <div class="duo">
+    <div>
+      ${card("우선 할 일", "미완료 · 우선순위순", table(["ID", "할 일", "담당", "기한", "상태"], top.map((x) => `<tr class="click" onclick="location.hash='#/run/fu/${x.id}'"><td class="id">${x.id}</td><td>${esc(x.title)}</td><td class="nw sm">${esc(x.owner)}</td><td class="dt">${esc(x.due)}</td><td>${lv(x.status)}</td></tr>`), S.apiOk ? "미완료 할 일 없음" : "D1 연결 필요"), `<a class="btn sm" href="#/run/fu">전체</a>`)}
+      ${card("미답변 U+ 질의", "작성·전달 상태", table(["ID", "질의", "요구사항", "상태"], qOpen.slice(0, 6).map((x) => `<tr class="click" onclick="location.hash='#/run/inq/${x.id}'"><td class="id">${x.id}</td><td>${esc(x.title)}</td><td>${reqChips(x.reqs)}</td><td>${lv(x.status)}</td></tr>`), S.apiOk ? "미답변 질의 없음" : "D1 연결 필요"), `<a class="btn sm" href="#/run/inq">전체</a>`)}
     </div>
-    ${slides.length ? `<div class="card mt"><h2>가이드 화면</h2><div class="thumbs">${slides.map((n) => { const s = S.content.guide.slides[n - 1]; return s ? `<a class="thumb" href="#/guide/${n}"><img loading="lazy" src="${s.img}" alt=""><span>p.${n} ${esc(s.title)}</span></a>` : ""; }).join("")}</div></div>` : ""}
-    </div>
-    <div><div class="card"><h2>피드백 <span class="sub">${list.length}건</span></h2>${threadHtml(list)}</div>${fbFormHtml({ target_type: tt, target_id: r.id })}</div>
+    ${card("요구사항 갭 분포", "세일즈올 현행 대비", donut([["충족", "--lv-ok"], ["부분", "--lv-warn"], ["미충족", "--lv-critical"], ["확인필요", "--c7"]].map(([l, c]) => ({ l, c, n: gapC[l] || 0, href: "#/req/list" })), d.requirements.length, "요구사항"))}
+  </div>
+  <div class="half">
+    ${card("리스크", "", C.risks.length ? `<ul class="clean">${iOpen.filter((x) => x.type === "리스크").map((x) => `<li><a href="#/run/issue/${x.id}">${x.id}</a> ${esc(x.title)} ${lv(x.impact)}</li>`).join("") || C.risks.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : "")}
+    ${card("최근 결정", "", `<ul class="tl">${d.decisions.slice(-4).reverse().map((x) => `<li><div class="when">${esc(x.decided_at)}</div><div><div class="hd"><a href="#/run/dec/${x.id}"><b>${x.id}</b></a>${lv(x.status)}</div><div class="sm">${esc(x.title)}</div></div></li>`).join("") || `<li><div class="muted">결정 없음</div></li>`}</ul>`)}
   </div>`;
-  const e = $("#edit"); if (e) e.onclick = () => editModal(kind, r);
-  bindFb(v, { target_type: tt, target_id: r.id });
+};
+
+P.run = (m, sub, id) => {
+  const map = { fu: ["fu", "#/run/fu"], inq: ["inquiries", "#/run/inq"], dec: ["decisions", "#/run/dec"], issue: ["issues", "#/run/issue"] };
+  const [key, base] = map[sub] || map.fu;
+  if (id) return detailPage(m, key, id, base);
+  const lead = { inquiries: "U+ 확인이 필요한 항목의 질의 → 전달 → 답변 → 요구사항 반영 추적. 상태 '전달'·'답변' 변경 시 전달일·답변일 자동 기록", decisions: "회의·협의 결정 사항 누적. 번복 시 상태 '번복' + 신규 결정 등록", issues: "일정·공수·의존성 리스크와 발생 이슈 관리" }[key];
+  listPage(m, key, base, { lead });
+};
+
+P.req = (m, sub, id) => {
+  if (sub === "matrix") return P.matrix(m);
+  if (sub === "gap") return P.gap(m);
+  if (sub === "check") {
+    if (id) return detailPage(m, "checks", id, "#/req/check");
+    return listPage(m, "checks", "#/req/check", { lead: "U+ 테스트 계정 검증 항목 (크로스 분석 기반). 결과 변경 시 확인자·확인일 자동 기록", title: "검증 체크리스트" });
+  }
+  if (id) return detailPage(m, "requirements", id, "#/req/list", relatedReqCard);
+  const R = S.d.requirements;
+  listPage(m, "requirements", "#/req/list", {
+    title: "요구사항 목록", desc: "회의 도출 R01~R17 · 가이드 분석(제안) R18~R22 · 크로스 분석(제안) R23~",
+    selects: [["area", "영역", [...new Set(R.map((r) => r.area))]], ["operators", "사업자", ["유모바일", "헬로모바일", "기타MVNO"]], ["scope", "범위", ["필수", "선택", "미정"]], ["source", "출처", [...new Set(R.map((r) => r.source))]]],
+    tools: `<button class="btn sm" id="csv">CSV</button>`,
+    after: (mm, rows) => { const b = $("#csv"); if (b) b.onclick = () => csv(rows); },
+  });
+};
+function csv(rows) {
+  const cols = ["id", "area", "title", "detail", "source", "current_state", "guide_ref", "operators", "scope", "gap", "decision", "priority", "status", "note", "updated_at", "updated_by"];
+  const head = ["ID", "영역", "요구사항", "배경·근거", "출처", "세일즈올 현행", "가이드", "사업자", "범위", "갭", "판단", "우선", "진행", "비고", "수정일(UTC)", "수정자"];
+  const line = (a) => a.map((x) => `"${String(x ?? "").replace(/"/g, '""')}"`).join(",");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + [line(head), ...rows.map((r) => line(cols.map((c) => r[c])))].join("\r\n")], { type: "text/csv" }));
+  a.download = `요구사항_${today()}.csv`; a.click();
 }
 
-PAGES.feedback = (v) => {
-  const f = PAGES.feedback.f || (PAGES.feedback.f = { status: "", cat: "", tt: "" });
-  const rows = S.fb.filter((x) => (!f.status || (f.status === "_open" ? x.status !== "완료" : x.status === f.status)) && (!f.cat || x.category === f.cat) && (!f.tt || x.target_type === f.tt));
-  v.innerHTML = `<div class="detail-grid"><div>
-    <div class="filters">
-      <select id="ffSt"><option value="">상태 전체</option><option value="_open" ${f.status === "_open" ? "selected" : ""}>미처리</option>${opts(ENUM.fbStatus, f.status)}</select>
-      <select id="ffCat">${opts(ENUM.fbCat, f.cat, "구분 전체")}</select>
-      <select id="ffTT"><option value="">대상 전체</option>${Object.entries(TARGET_LABEL).map(([k, l]) => `<option value="${k}" ${f.tt === k ? "selected" : ""}>${l}</option>`).join("")}</select>
-      <span class="sp"></span><span class="muted">${rows.length}건</span></div>
-    ${threadHtml(rows, { showTarget: true })}</div>
-    <div>${fbFormHtml(null)}<p class="muted mt8">요구사항·F/U별 피드백은 각 상세 화면에서도 등록 가능</p></div></div>`;
-  $("#ffSt").onchange = (e) => { f.status = e.target.value; render(); };
-  $("#ffCat").onchange = (e) => { f.cat = e.target.value; render(); };
-  $("#ffTT").onchange = (e) => { f.tt = e.target.value; render(); };
-  bindFb(v, null);
+P.matrix = (m) => {
+  const ops = ["유모바일", "헬로모바일", "기타MVNO"];
+  const f = (F.matrix = F.matrix || { scope: "" });
+  const rows = S.d.requirements.filter((r) => !f.scope || r.scope === f.scope);
+  const on = (r, o) => r.operators === "공통" || ids(r.operators).includes(o) || ids(r.operators).includes("공통");
+  const tot = ops.map((o) => rows.filter((r) => on(r, o)).length);
+  const sc = count(S.d.requirements, "scope");
+  m.innerHTML = `<p class="lead">요구사항 × 사업자 적용 범위. '공통'은 전 사업자 적용. 적용 사업자·범위 수정은 요구사항 상세에서 처리</p>` + card("사업자별 매트릭스", `${rows.length}건`, `
+    <div class="toolbar"><div class="seg">${[["", "전체", S.d.requirements.length], ...["필수", "선택", "미정"].map((v) => [v, v, sc[v] || 0])].map(([v, l, n]) => `<button data-sc="${v}" aria-pressed="${f.scope === v}">${l}<span class="n">${n}</span></button>`).join("")}</div></div>
+    ${table(["ID", "영역", "요구사항", ...ops.map((o) => `<span style="display:block;text-align:center">${o}</span>`), "범위", "갭"], rows.map((r) => `<tr class="click" onclick="location.hash='#/req/list/${r.id}'"><td class="id">${r.id}</td><td class="nw sm">${esc(r.area)}</td><td>${esc(r.title)}</td>${ops.map((o) => `<td class="c"><span class="dot ${on(r, o) ? "" : "off"}"></span></td>`).join("")}<td>${lv(r.scope)}</td><td>${lv(r.gap)}</td></tr>`).concat(rows.length ? [`<tr><td></td><td></td><td class="sm"><b>사업자별 적용 건수</b></td>${tot.map((n) => `<td class="c num"><b>${n}</b></td>`).join("")}<td></td><td></td></tr>`] : []))}`);
+  m.querySelectorAll("[data-sc]").forEach((b) => (b.onclick = () => { f.scope = b.dataset.sc; render(); }));
 };
 
-PAGES.meeting = (v) => {
-  const m = S.content.meetings[0];
-  const list = S.fb.filter((x) => x.target_type === "meeting" && x.target_id === m.id);
-  v.innerHTML = `
-  <div class="card"><h2 style="font-size:17px">${esc(m.date)} · ${esc(m.title)}</h2>
-    <p class="muted" style="margin-top:-6px">출처: 회의 녹음 음성인식 결과 기반</p>
-    <div class="tbl-wrap"><table><tbody>${m.overview.map(([k, val, n]) => `<tr><th style="width:110px">${esc(k)}</th><td>${esc(val)}${n ? `<span class="cue">※ ${esc(n)}</span>` : ""}</td></tr>`).join("")}</tbody></table></div></div>
-  <div class="sec-title">핵심 요약</div><div class="card"><ul class="plain">${m.summary.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div>
-  <div class="sec-title">안건별 논의</div>
-  <div class="tbl-wrap"><table><thead><tr><th>안건</th><th>시각</th><th>현황·문제</th><th>요구사항·의견</th></tr></thead><tbody>
-  ${m.agenda.map(([a, t, s, r]) => `<tr><td style="white-space:nowrap;font-weight:600">${esc(a)}</td><td class="muted">${esc(t)}</td><td class="tx2">${esc(s)}</td><td>${esc(r)}</td></tr>`).join("")}</tbody></table></div>
-  <div class="grid g2 mt">
-    <div class="card"><h2>결정 사항 <span class="sub">진행 방식 합의 중심</span></h2><ol class="plain">${m.decisions.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>
-    <div class="card"><h2>미결·확인 필요</h2><ul class="plain">${m.open.map((s) => `<li>${esc(s)}</li>`).join("")}</ul></div>
-  </div>
-  <div class="sec-title">액션 아이템 → <a href="#/fu">F/U 트래커</a>에서 관리</div>
-  <div class="grid g2 mt"><div class="card"><h2>회의록 피드백 <span class="sub">${list.length}건</span></h2>${threadHtml(list)}</div>
-  <div>${fbFormHtml({ target_type: "meeting", target_id: m.id })}</div></div>`;
-  bindFb(v, { target_type: "meeting", target_id: m.id });
-};
-
-PAGES.guide = (v) => {
-  const G = S.content.guide;
-  const reqBySlide = {};
-  S.req.forEach((r) => String(r.guide_ref || "").split(",").map((s) => s.trim()).filter(Boolean).forEach((n) => (reqBySlide[n] = (reqBySlide[n] || []).concat(r.id))));
-  v.innerHTML = `
-  <div class="card"><h2 style="font-size:17px">${esc(G.title)} <span class="sub">${esc(G.file)} · ${G.pages}p</span></h2>
-    <div class="tbl-wrap"><table><tbody>${G.overview.map(([k, a, b]) => `<tr><th style="width:110px">${esc(k)}</th><td>${esc(a)}${b ? `<span class="cue">※ ${esc(b)}</span>` : ""}</td></tr>`).join("")}</tbody></table></div></div>
-  <div class="sec-title">신청서 작성 단계 (Mobile 신규가입)</div>
-  <div class="steps">${G.steps.map((s, i) => `<div class="step"><h3>${i + 1}. ${esc(s.name)}</h3><div style="margin:-4px 0 8px">${s.slides.map((n) => `<a class="chip-link" href="#/guide/${n}">p.${n}</a>`).join("")}</div><ul>${s.items.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></div>`).join("")}</div>
-  <div class="sec-title">MVNO 적용 시사점 <span class="muted" style="font-size:13px;font-weight:400">가이드 분석(제안)</span></div>
-  <div class="tbl-wrap"><table><thead><tr><th>영역</th><th>현행 → 시사점</th><th>관련 요구사항</th></tr></thead><tbody>
-  ${G.implications.map(([a, b, c]) => `<tr><td style="white-space:nowrap;font-weight:600">${esc(a)}</td><td>${esc(b)}</td><td>${c.split(",").map((x) => `<a class="chip-link" href="#/req/${x.trim()}">${x.trim()}</a>`).join("")}</td></tr>`).join("")}</tbody></table></div>
-  <div class="grid g2 mt">
-    <div class="card"><h2>편리 기능</h2><div class="tbl-wrap"><table><tbody>${G.features.map(([a, b, n]) => `<tr><td style="white-space:nowrap;font-weight:600">${esc(a)}</td><td>${esc(b)}</td><td><a class="chip-link" href="#/guide/${n}">p.${n}</a></td></tr>`).join("")}</tbody></table></div></div>
-    <div class="card"><h2>FAQ</h2><div class="tbl-wrap"><table><tbody>${G.faq.map(([q, a, b, n]) => `<tr><td class="id">${q}</td><td><b style="font-weight:600">${esc(a)}</b><span class="cue">${esc(b)}</span></td><td><a class="chip-link" href="#/guide/${n}">p.${n}</a></td></tr>`).join("")}</tbody></table></div></div>
-  </div>
-  <div class="sec-title">슬라이드 전체 (${G.slides.length})</div>
-  <div class="thumbs">${G.slides.map((s) => `<a class="thumb" href="#/guide/${s.n}"><img loading="lazy" src="${s.img}" alt="p.${s.n}"><span>p.${s.n} ${esc(s.title)}${reqBySlide[s.n] ? " · " + reqBySlide[s.n].join(",") : ""}</span></a>`).join("")}</div>`;
-};
-
-PAGES.guideSlide = (v, n) => {
-  const G = S.content.guide; n = Number(n);
-  const s = G.slides[n - 1];
-  if (!s) { v.innerHTML = `<div class="empty">슬라이드 없음</div>`; return; }
-  $("#pageTitle").textContent = `세일즈올 가이드 p.${n}`;
-  $("#topActions").innerHTML = `<a class="btn" href="#/guide">목록</a>${n > 1 ? `<a class="btn" href="#/guide/${n - 1}">◀ 이전</a>` : ""}${n < G.slides.length ? `<a class="btn" href="#/guide/${n + 1}">다음 ▶</a>` : ""}`;
-  const rel = S.req.filter((r) => String(r.guide_ref || "").split(",").map((x) => x.trim()).includes(String(n)));
-  const list = S.fb.filter((x) => x.target_type === "guide" && x.target_id === "p." + n);
-  v.innerHTML = `<div class="detail-grid"><div class="slide-view"><img src="${s.img}" alt="p.${n}">
-    ${s.text ? `<div class="card mt"><h2>슬라이드 텍스트</h2><div class="tx2" style="font-size:13px">${esc(s.text)}</div></div>` : ""}</div>
-    <div><div class="card"><h2>${esc(s.title)}</h2>
-      <div class="k muted" style="font-size:12px;font-weight:600">관련 요구사항</div>
-      ${rel.length ? `<ul class="tl">${rel.map((r) => `<li><a class="d id" href="#/req/${r.id}">${r.id}</a><div>${esc(r.title)}</div><div>${tag(r.gap)}</div></li>`).join("")}</ul>` : `<div class="muted">없음</div>`}</div>
-    <div class="card mt"><h2>피드백 <span class="sub">${list.length}건</span></h2>${threadHtml(list)}</div>
-    ${fbFormHtml({ target_type: "guide", target_id: "p." + n })}</div></div>`;
-  bindFb(v, { target_type: "guide", target_id: "p." + n });
-};
-
-PAGES.cross = (v) => {
+P.gap = (m) => {
   const X = S.content.cross;
-  if (!X) { v.innerHTML = `<div class="empty">크로스 분석 데이터 없음</div>`; return; }
-  const f = PAGES.cross.f || (PAGES.cross.f = { verdict: "" });
-  const VT = { "일치": "ok", "상이": "bad", "가이드 미기재": "info" };
-  const vtag = (x) => `<span class="tag t-${VT[x] || ""}">${esc(x)}</span>`;
-  const reqLinks = (r) => String(r || "").split(",").map((x) => x.trim()).filter(Boolean).map((x) => {
-    const row = S.req.find((q) => q.id === x);
-    return `<a class="chip-link" href="#/req/${x}" title="${esc(row ? row.title : "")}">${x}</a>`;
-  }).join("");
-  const rows = X.matrix.filter((r) => !f.verdict || r.verdict === f.verdict);
-  const cnt = X.matrix.reduce((m, r) => ((m[r.verdict] = (m[r.verdict] || 0) + 1), m), {});
-  const fbList = S.fb.filter((x) => x.target_type === "general" && x.target_id === "cross");
-  v.innerHTML = `
-  <div class="card"><h2 style="font-size:17px">가이드 × 회의록 크로스 분석 <span class="sub">${esc(X.basis)}</span></h2>
-    <div class="tbl-wrap"><table><tbody>${X.summary.map(([a, b, c]) => `<tr><th style="width:150px">${esc(a)}</th><td>${esc(b)}<span class="cue">※ ${esc(c)}</span></td></tr>`).join("")}</tbody></table></div></div>
-
-  <div class="sec-title">1. 회의 안건 × 가이드 현행 대조</div>
-  <div class="filters">
-    <select id="cxV"><option value="">판정 전체 (${X.matrix.length})</option>${["일치", "상이", "가이드 미기재"].map((k) => `<option value="${k}" ${f.verdict === k ? "selected" : ""}>${k} (${cnt[k] || 0})</option>`).join("")}</select>
-    <span class="sp"></span><span class="muted">일치: 회의 현황 인식과 가이드 현행 부합 · 상이: 불일치 · 가이드 미기재: 가이드로 판단 불가</span>
-  </div>
-  <div class="tbl-wrap"><table><thead><tr><th>안건 (시각)</th><th>회의 현황·요구</th><th>가이드 현행</th><th>판정</th><th>시사점</th><th>요구사항</th></tr></thead><tbody>
-  ${rows.map((r) => `<tr><td style="white-space:nowrap;font-weight:600">${esc(r.agenda)}<span class="cue">${esc(r.t)}</span></td>
-    <td class="tx2" style="font-size:13px">${esc(r.meeting)}</td>
-    <td style="font-size:13px">${esc(r.guide)} ${slideLinks(r.slides)}</td>
-    <td>${vtag(r.verdict)}</td><td style="font-size:13px">${esc(r.note)}</td><td>${reqLinks(r.reqs)}</td></tr>`).join("")}
-  </tbody></table></div>
-
-  <div class="sec-title">2. 회의 인식 정정</div>
-  <div class="tbl-wrap"><table><thead><tr><th>항목</th><th>회의 발언</th><th>가이드 확인</th><th>잔여 확인</th></tr></thead><tbody>
-  ${X.corrections.map(([a, b, c, d]) => `<tr><td style="white-space:nowrap;font-weight:600">${esc(a)}</td><td class="tx2">${esc(b)}</td><td>${esc(c)}</td><td class="tx2">${esc(d.replace(/^잔여 확인:\s*/, ""))}</td></tr>`).join("")}
-  </tbody></table></div>
-
-  <div class="sec-title">3. 회의 미논의 가이드 기능 <span class="muted" style="font-size:13px;font-weight:400">MVNO 적용 검토 · 크로스 분석(제안)</span></div>
-  <div class="tbl-wrap"><table><thead><tr><th>기능</th><th>가이드 현행</th><th>MVNO 검토 쟁점</th><th>요구사항</th></tr></thead><tbody>
-  ${X.uncovered.map((r) => `<tr><td style="white-space:nowrap;font-weight:600">${esc(r.item)}</td><td style="font-size:13px">${esc(r.guide)} ${slideLinks(r.slides)}</td><td>${esc(r.impact)}</td><td>${reqLinks(r.req)}</td></tr>`).join("")}
-  </tbody></table></div>
-
-  <div class="grid g2 mt">
-    <div class="card"><h2>4. 가이드 확인 불가 항목 <span class="sub">${X.unverifiable.length}건 · 테스트 계정·U+ 확인</span></h2>
-      <div class="tbl-wrap"><table><tbody>${X.unverifiable.map(([a, b, c]) => `<tr><td>${reqLinks(a)}</td><td>${esc(b)}<span class="cue">※ ${esc(c)}</span></td></tr>`).join("")}</tbody></table></div></div>
-    <div class="card"><h2>5. 테스트 계정 검증 체크리스트 <span class="sub">${X.checklist.length}항목 · F2</span></h2>
-      <div class="tbl-wrap"><table><thead><tr><th>영역</th><th>확인 항목</th><th>요구사항</th></tr></thead><tbody>${X.checklist.map(([a, b, c]) => `<tr><td style="white-space:nowrap;font-weight:600">${esc(a)}</td><td>${esc(b)}</td><td>${reqLinks(c)}</td></tr>`).join("")}</tbody></table></div></div>
-  </div>
-  <div class="grid g2 mt"><div class="card"><h2>크로스 분석 피드백 <span class="sub">${fbList.length}건</span></h2>${threadHtml(fbList)}</div>
-  <div>${fbFormHtml({ target_type: "general", target_id: "cross" })}</div></div>`;
-  $("#cxV").onchange = (e) => { f.verdict = e.target.value; render(); };
-  bindFb(v, { target_type: "general", target_id: "cross" });
+  const f = (F.gap = F.gap || { v: "" });
+  const VT = { "일치": "ok", "상이": "critical", "가이드 미기재": "info" };
+  const vtag = (x) => `<span class="lv lv-${VT[x]}"><span class="chip"></span>${esc(x)}</span>`;
+  const cnt = count(X.matrix, "verdict");
+  const rows = X.matrix.filter((r) => !f.v || r.verdict === f.v);
+  m.innerHTML = `<p class="lead">${esc(X.basis)} 대조 결과. '크로스 분석(제안)' 항목은 회의 외 추가 검토 대상</p>
+  <div class="tiles">${X.summary.map(([a, b, c], i) => `<div class="tile ${i === 0 ? "hero" : ""}"><div class="lbl">${esc(a)}<span class="ic">${ICON.chart}</span></div><div class="val" style="font-size:17px;line-height:1.5;white-space:normal">${esc(b)}</div><div class="sub" style="white-space:normal">${esc(c)}</div></div>`).join("")}</div>`
+  + card("회의 안건 × 가이드 현행", "일치: 회의 인식과 가이드 부합 · 상이: 불일치 · 가이드 미기재: 판단 불가", `
+    <div class="toolbar"><div class="seg">${[["", "전체", X.matrix.length], ...["일치", "상이", "가이드 미기재"].map((k) => [k, k, cnt[k] || 0])].map(([v, l, n]) => `<button data-v="${v}" aria-pressed="${f.v === v}">${l}<span class="n">${n}</span></button>`).join("")}</div></div>
+    ${table(["안건", "회의 현황·요구", "가이드 현행", "판정", "시사점", "요구사항"], rows.map((r) => `<tr><td class="nw"><b>${esc(r.agenda)}</b><span class="cue">${esc(r.t)}</span></td><td class="sm">${esc(r.meeting)}</td><td class="sm">${esc(r.guide)} ${slideChips(r.slides)}</td><td>${vtag(r.verdict)}</td><td class="sm">${esc(r.note)}</td><td>${reqChips(r.reqs)}</td></tr>`))}`)
+  + `<div class="half">${card("회의 인식 정정", `${X.corrections.length}건`, table(["항목", "회의 발언 → 가이드 확인", "잔여 확인"], X.corrections.map(([a, b, c, d]) => `<tr><td class="nw"><b>${esc(a)}</b></td><td class="sm">${esc(b)}<span class="cue">→ ${esc(c)}</span></td><td class="sm">${esc(d.replace(/^잔여 확인:\s*/, ""))}</td></tr>`)))}
+    ${card("가이드 확인 불가", `${X.unverifiable.length}건 · 테스트 계정·U+ 확인`, table(["요구사항", "확인 대상"], X.unverifiable.map(([a, b, c]) => `<tr><td>${reqChips(a)}</td><td>${esc(b)}<span class="cue">※ ${esc(c)}</span></td></tr>`)))}</div>`
+  + card("회의 미논의 가이드 기능", "MVNO 적용 검토 · 크로스 분석(제안)", table(["기능", "가이드 현행", "MVNO 검토 쟁점", "요구사항"], X.uncovered.map((r) => `<tr><td class="nw"><b>${esc(r.item)}</b></td><td class="sm">${esc(r.guide)} ${slideChips(r.slides)}</td><td class="sm">${esc(r.impact)}</td><td>${reqChips(r.req)}</td></tr>`)))
+  + comments("general", "cross");
+  m.querySelectorAll("[data-v]").forEach((b) => (b.onclick = () => { f.v = b.dataset.v; render(); }));
+  bindComments("general", "cross");
 };
 
-PAGES.glossary = (v) => {
-  v.innerHTML = `<div class="tbl-wrap"><table><thead><tr><th>용어</th><th>의미</th><th>비고</th></tr></thead><tbody>
-  ${S.content.glossary.map(([a, b, c]) => `<tr><td style="font-weight:600;white-space:nowrap">${esc(a)}</td><td>${esc(b)}</td><td class="tx2">${esc(c)}</td></tr>`).join("")}</tbody></table></div>
-  <p class="muted mt8">녹취록 음성인식 표기 → 실제 의미 보정 포함. 용어 추가·수정 요청은 피드백(대상: 일반)으로 등록</p>`;
+P.plan = (m, sub, id) => {
+  const C = S.content;
+  if (sub === "meeting") return id ? P.meeting(m, id) : P.meetings(m);
+  m.innerHTML = card("단계", "프로젝트 단계별 산출물", `<div class="phases">${C.phases.map((p) => `<div class="phase ${p.state}"><div class="pn">${p.state === "current" ? lv("진행중") : ""}${esc(p.name)}</div><div class="pp">${esc(p.period)}</div><ul>${p.outputs.map((o) => `<li>${esc(o)}</li>`).join("")}</ul></div>`).join("")}</div>`)
+  + `<div class="duo">${card("일정", "U+ 로드맵 포함", `<ul class="tl">${C.schedule.map((s) => `<li><div class="when">${esc(s.date)}</div><div><div class="hd"><b>${esc(s.title)}</b>${s.kind === "U+ 로드맵" ? '<span class="tag-src">U+ 로드맵</span>' : ""}${{ done: lv("완료"), next: lv("진행중") }[s.state] || ""}</div>${s.note ? `<div class="ct">※ ${esc(s.note)}</div>` : ""}</div></li>`).join("")}</ul>`)}
+    ${card("일정 리스크", "", `<ul class="clean">${C.risks.map((r) => `<li>${esc(r)}</li>`).join("")}</ul><div style="margin-top:12px"><a class="btn sm" href="#/run/issue">이슈·리스크</a></div>`)}</div>`;
+};
+P.meetings = (m) => {
+  const ms = S.content.meetings;
+  m.innerHTML = card("회의록", `${ms.length}건 · 신규 회의는 content.json meetings 배열에 추가`, table(["일자", "회의", "구분", "결정", "할 일", "요구사항"], ms.map((x) => {
+    const d = S.d.decisions.filter((r) => r.source === x.id).length, a = S.d.fu.filter((r) => r.source === x.ref).length, q = S.d.requirements.filter((r) => r.source === x.ref).length;
+    return `<tr class="click" onclick="location.hash='#/plan/meeting/${x.id}'"><td class="dt">${esc(x.date)}</td><td><b>${esc(x.title)}</b></td><td>${lv(x.kind || "-")}</td><td class="num">${d}</td><td class="num">${a}</td><td class="num">${q}</td></tr>`;
+  })));
+};
+P.meeting = (m, id) => {
+  const x = S.content.meetings.find((r) => r.id === id);
+  if (!x) { m.innerHTML = card("회의록", "", `<div class="empty">회의 없음</div>`); return; }
+  const dec = S.d.decisions.filter((r) => r.source === x.id), act = S.d.fu.filter((r) => r.source === x.ref), req = S.d.requirements.filter((r) => r.source === x.ref);
+  m.innerHTML = `<div class="duo"><div>
+    ${card(esc(x.title), esc(x.date), `<dl class="kv">${x.overview.map(([k, v, n]) => `<dt>${esc(k)}</dt><dd>${esc(v)}${n ? `<span class="cue">※ ${esc(n)}</span>` : ""}</dd>`).join("")}</dl>`, `<a class="btn sm" href="#/plan/meeting">목록</a>`)}
+    ${card("핵심 요약", "", `<ul class="clean">${x.summary.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`)}
+    ${card("안건별 논의", `${x.agenda.length}건`, table(["안건", "현황·문제", "요구사항·의견"], x.agenda.map(([a, t, s, r]) => `<tr><td class="nw"><b>${esc(a)}</b><span class="cue">${esc(t)}</span></td><td class="sm">${esc(s)}</td><td class="sm">${esc(r)}</td></tr>`)))}
+    ${card("미결·확인 필요", "", `<ul class="clean">${x.open.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`)}
+  </div><div>
+    ${card("결정", `${dec.length}건 · 결정 로그`, `<ul class="tl">${dec.map((r) => `<li><div class="when"><a href="#/run/dec/${r.id}">${r.id}</a></div><div><div class="sm" style="margin:0">${esc(r.title)}</div></div></li>`).join("") || `<li><div class="muted">없음</div></li>`}</ul>`)}
+    ${card("액션 (할 일)", `${act.length}건`, table(["ID", "할 일", "상태"], act.map((r) => `<tr class="click" onclick="location.hash='#/run/fu/${r.id}'"><td class="id">${r.id}</td><td class="sm">${esc(r.title)}<span class="cue">${esc(r.owner)} · ${esc(r.due)}</span></td><td>${lv(r.status)}</td></tr>`)))}
+    ${card("도출 요구사항", `${req.length}건`, `<div>${req.map((r) => `<a class="chn" href="#/req/list/${r.id}" title="${esc(r.title)}">${r.id}</a>`).join("")}</div>`)}
+    ${comments("meeting", x.id)}
+  </div></div>`;
+  bindComments("meeting", x.id);
 };
 
-PAGES.docs = (v) => {
-  v.innerHTML = `<div class="tbl-wrap"><table><thead><tr><th>자료</th><th>설명</th><th>위치</th><th>비고</th></tr></thead><tbody>
-  ${S.content.docs.map(([a, b, c, d]) => `<tr><td style="font-weight:600">${esc(a)}</td><td>${esc(b)}</td><td class="tx2">${c === "미보유" ? tag("미보유") : esc(c)}</td><td class="tx2">${esc(d)}</td></tr>`).join("")}</tbody></table></div>
-  <p class="muted mt8">정적 콘텐츠 수정: public/data/content.json 편집 후 GitHub 커밋 → Cloudflare Pages 자동 배포</p>`;
+P.ref = (m, sub, id) => {
+  const C = S.content, G = C.guide;
+  if (sub === "glossary") {
+    m.innerHTML = card("용어집", "녹취록 음성인식 표기 → 실제 의미 보정 포함", table(["용어", "의미", "비고"], C.glossary.map(([a, b, c]) => `<tr><td class="nw"><b>${esc(a)}</b></td><td>${esc(b)}</td><td class="sm">${esc(c)}</td></tr>`)));
+    return;
+  }
+  if (sub === "docs") {
+    m.innerHTML = card("자료실", "자료 위치·보유 현황", `<div class="docs">${C.docs.map(([a, b, c, d]) => `<div class="doc"><span class="ic">${ICON.doc}</span><div><b>${esc(a)}</b><span>${esc(b)}</span><span class="mono" style="margin-top:6px">${c === "미보유" ? lv("미보유") : esc(c)}</span>${d ? `<span>${esc(d)}</span>` : ""}</div></div>`).join("")}</div>`);
+    return;
+  }
+  if (id) {
+    const n = Number(id), s = G.slides[n - 1];
+    if (!s) { m.innerHTML = card("가이드", "", `<div class="empty">슬라이드 없음</div>`); return; }
+    const rel = S.d.requirements.filter((r) => ids(r.guide_ref).includes(String(n)));
+    m.innerHTML = `<div class="duo"><div>${card(`p.${n} · ${esc(s.title)}`, "", `<div class="slide"><img src="${s.img}" alt="p.${n}"></div>${s.text ? `<p class="lead" style="margin:14px 0 0">${esc(s.text)}</p>` : ""}`,
+      `<a class="btn sm" href="#/ref/guide">목록</a>${n > 1 ? `<a class="btn sm" href="#/ref/guide/${n - 1}">이전</a>` : ""}${n < G.slides.length ? `<a class="btn sm" href="#/ref/guide/${n + 1}">다음</a>` : ""}`)}</div>
+      <div>${card("관련 요구사항", `${rel.length}건`, rel.length ? table(["ID", "요구사항", "갭"], rel.map((r) => `<tr class="click" onclick="location.hash='#/req/list/${r.id}'"><td class="id">${r.id}</td><td>${esc(r.title)}</td><td>${lv(r.gap)}</td></tr>`)) : `<div class="muted">없음</div>`)}${comments("guide", "p." + n)}</div></div>`;
+    bindComments("guide", "p." + n);
+    return;
+  }
+  const reqBy = {};
+  S.d.requirements.forEach((r) => ids(r.guide_ref).forEach((n) => (reqBy[n] = (reqBy[n] || 0) + 1)));
+  m.innerHTML = card(esc(G.title), `${esc(G.file)} · ${G.pages}p`, `<dl class="kv">${G.overview.map(([k, a, b]) => `<dt>${esc(k)}</dt><dd>${esc(a)}${b ? `<span class="cue">※ ${esc(b)}</span>` : ""}</dd>`).join("")}</dl>`)
+  + card("신청서 작성 단계", "Mobile 신규가입", `<div class="steps">${G.steps.map((s, i) => `<div class="step"><h3>${i + 1}. ${esc(s.name)}</h3><div>${slideChips(s.slides.join(","))}</div><ul>${s.items.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></div>`).join("")}</div>`)
+  + `<div class="half">${card("편리 기능", "", table(["기능", "설명", ""], G.features.map(([a, b, n]) => `<tr><td class="nw"><b>${esc(a)}</b></td><td class="sm">${esc(b)}</td><td>${slideChips(String(n))}</td></tr>`)))}
+    ${card("FAQ", "", table(["", "질문 · 조치", ""], G.faq.map(([q, a, b, n]) => `<tr><td class="id">${q}</td><td><b style="font-weight:600">${esc(a)}</b><span class="cue">${esc(b)}</span></td><td>${slideChips(String(n))}</td></tr>`)))}</div>`
+  + card("슬라이드", `${G.slides.length}장 · 요구사항 연결 건수 표시`, `<div class="thumbs">${G.slides.map((s) => `<a class="thumb" href="#/ref/guide/${s.n}"><img loading="lazy" src="${s.img}" alt="p.${s.n}"><span>p.${s.n} ${esc(s.title)}${reqBy[s.n] ? ` · 요구사항 ${reqBy[s.n]}` : ""}</span></a>`).join("")}</div>`);
 };
 
-function logTable(rows) {
-  const ent = { fu: "F/U", requirement: "요구사항", feedback: "피드백" };
-  const act = { create: "등록", update: "수정", delete: "삭제" };
-  const link = (r) => r.entity === "fu" ? `#/fu/${r.entity_id}` : r.entity === "requirement" ? `#/req/${r.entity_id}` : "#/feedback";
-  const FL = { title: "제목", status: "상태", priority: "우선", owner: "담당", due: "기한", note: "비고", source: "출처", area: "영역", detail: "배경", current_state: "현행", guide_ref: "가이드", gap: "갭", decision: "판단", reply: "답변", category: "구분", target: "대상", body: "내용", sort: "순서" };
-  const diffTxt = (d) => { try { const o = JSON.parse(d || "{}"); return Object.entries(o).map(([k, [a, b]]) => `${FL[k] || k}: ${a == null ? "" : String(a).slice(0, 30)} → ${b == null ? "" : String(b).slice(0, 40)}`).join(" / "); } catch { return ""; } };
-  return `<div class="tbl-wrap"><table><thead><tr><th>시각(KST)</th><th>대상</th><th>구분</th><th>변경</th><th>작업자</th></tr></thead><tbody>
-  ${rows.map((r) => `<tr><td style="white-space:nowrap" class="tx2">${esc(toKST(r.at))}</td><td style="white-space:nowrap"><a href="${link(r)}">${ent[r.entity] || r.entity} ${esc(r.entity === "feedback" ? "#" + r.entity_id : r.entity_id)}</a></td>
-  <td>${tag(act[r.action] || r.action)}</td><td class="tx2" style="font-size:12.5px">${esc(diffTxt(r.diff))}</td><td class="tx2">${esc(r.actor)}</td></tr>`).join("")}</tbody></table></div>`;
-}
-PAGES.log = async (v) => {
-  if (!S.apiOk) { v.innerHTML = `<div class="empty">D1 연결 필요</div>`; return; }
+P.admin = async (m, sub) => {
+  const C = S.content;
+  if (sub === "settings") {
+    m.innerHTML = `<div class="half">${card("참여자", "Cloudflare Access 허용 대상 기준", table(["소속", "구분", "비고"], C.participants.map(([a, b, c]) => `<tr><td class="nw"><b>${esc(a)}</b></td><td>${esc(b)}</td><td class="sm">${esc(c)}</td></tr>`)))}
+      ${card("사업자", "요구사항 '적용 사업자' 선택값", table(["사업자", "설명"], C.operators.map(([a, b]) => `<tr><td class="nw"><b>${esc(a)}</b></td><td class="sm">${esc(b)}</td></tr>`)))}</div>`
+      + card("상태값 정의", "", table(["대상", "값"], [["할 일", E.fu.seg.vals], ["U+ 질의", E.inquiries.seg.vals], ["결정", E.decisions.seg.vals], ["이슈·리스크", E.issues.seg.vals], ["요구사항 갭", E.requirements.seg.vals], ["요구사항 범위", ["필수", "선택", "미정"]], ["검증 결과", E.checks.seg.vals]].map(([a, v]) => `<tr><td class="nw"><b>${a}</b></td><td>${v.map(lv).join(" ")}</td></tr>`)))
+      + card("시스템", "", `<dl class="kv"><dt>로그인</dt><dd>${esc(S.me || "-")}</dd><dt>D1</dt><dd>${S.apiOk ? lv("정상") : lv("이슈")}</dd><dt>참여자·사업자 수정</dt><dd>public/data/content.json 편집 후 커밋</dd><dt>접근 제어</dt><dd>Cloudflare Access (Zero Trust) 정책</dd></dl>`);
+    return;
+  }
+  if (!S.apiOk) { m.innerHTML = card("변경 이력", "", `<div class="empty">D1 연결 필요</div>`); return; }
   const rows = await api("changelog?limit=300");
-  v.innerHTML = rows.length ? logTable(rows) : `<div class="empty">변경 이력 없음</div>`;
+  const ENT = { fu: ["할 일", "#/run/fu/"], requirement: ["요구사항", "#/req/list/"], inquiry: ["U+ 질의", "#/run/inq/"], decision: ["결정", "#/run/dec/"], issue: ["이슈", "#/run/issue/"], check: ["검증", "#/req/check/"], feedback: ["코멘트", null] };
+  const ACT = { create: "등록", update: "수정", delete: "삭제" };
+  const FL = { title: "제목", item: "항목", status: "상태", priority: "우선", owner: "담당", due: "기한", note: "비고", source: "출처", area: "영역", detail: "배경", current_state: "현행", guide_ref: "가이드", gap: "갭", decision: "판단", operators: "사업자", scope: "범위", reqs: "요구사항", answer: "답변", asked_at: "전달일", answered_at: "답변일", result: "결과", checked_by: "확인자", checked_at: "확인일", impact: "영향", type: "구분", action: "대응", rationale: "근거", target: "대상", reply: "답변", body: "내용" };
+  const diffTxt = (d) => { try { return Object.entries(JSON.parse(d || "{}")).map(([k, [a, b]]) => `${FL[k] || k}: ${a == null ? "" : String(a).slice(0, 30)} → ${b == null ? "" : String(b).slice(0, 40)}`).join(" / "); } catch { return ""; } };
+  m.innerHTML = card("변경 이력", `최근 ${rows.length}건`, `<ul class="tl">${rows.map((r) => { const [l, h] = ENT[r.entity] || [r.entity, null]; const idt = r.entity === "feedback" ? "#" + r.entity_id : r.entity_id; return `<li><div class="when">${esc(toKST(r.at))}</div><div><div class="hd">${h && r.action !== "delete" ? `<a href="${h}${r.entity_id}"><b>${l} ${esc(idt)}</b></a>` : `<b>${l} ${esc(idt)}</b>`}${lv(ACT[r.action] || r.action)}<span class="tag-src">${esc(r.actor)}</span></div>${diffTxt(r.diff) ? `<div class="sm">${esc(diffTxt(r.diff))}</div>` : ""}</div></li>`; }).join("") || `<li><div class="muted">없음</div></li>`}</ul>`);
 };
 
-// ---------- router ----------
-const TITLES = { dashboard: "대시보드", fu: "F/U 트래커", req: "요구사항", cross: "크로스 분석", feedback: "피드백", meeting: "회의록", guide: "세일즈올 가이드", glossary: "용어집", docs: "자료 목록", log: "변경 이력" };
-async function render() {
-  const [r = "dashboard", id] = location.hash.replace(/^#\/?/, "").split("/");
-  const route = TITLES[r] ? r : "dashboard";
-  document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("on", a.dataset.r === route));
-  $("#pageTitle").textContent = TITLES[route];
-  $("#topActions").innerHTML = "";
-  $("#side").classList.remove("open");
-  const v = $("#view");
-  try {
-    if (id && route === "fu") await PAGES.fuDetail(v, decodeURIComponent(id));
-    else if (id && route === "req") await PAGES.reqDetail(v, decodeURIComponent(id));
-    else if (id && route === "guide") await PAGES.guideSlide(v, id);
-    else await PAGES[route](v);
-  } catch (e) { v.innerHTML = `<div class="empty">오류: ${esc(e.message)}</div>`; console.error(e); }
-}
-window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); });
-$("#menuBtn").onclick = () => $("#side").classList.toggle("open");
+// ================= 내비게이션 =================
+const NAV = [
+  { k: "home", l: "홈", y: () => (S.content.phases || []).find((p) => p.state === "current")?.name || "" },
+  { k: "run", l: "실행 관리", subs: [["fu", "할 일"], ["inq", "U+ 질의"], ["dec", "결정 로그"], ["issue", "이슈·리스크"]],
+    y: () => `미완료 ${S.d.fu.filter((x) => x.status !== "완료").length}`, alert: () => S.d.issues.some((x) => x.status !== "해소" && x.impact === "상") },
+  { k: "req", l: "요구사항", subs: [["list", "목록"], ["matrix", "사업자별 매트릭스"], ["gap", "갭 분석"], ["check", "검증 체크리스트"]], y: () => `${S.d.requirements.length}건` },
+  { k: "plan", l: "일정·회의", subs: [["milestone", "마일스톤"], ["meeting", "회의록"]], y: () => (S.content.schedule.find((s) => s.state === "next") || {}).date || "" },
+  { k: "ref", l: "레퍼런스", subs: [["guide", "세일즈올 가이드"], ["glossary", "용어집"], ["docs", "자료실"]], y: () => `가이드 ${S.content.guide.pages}p` },
+  { k: "admin", l: "관리", subs: [["log", "변경 이력"], ["settings", "참여자·사업자"]], y: () => (S.apiOk ? "D1" : "오프라인") },
+];
+const ADD = { "run/fu": "fu", "run/inq": "inquiries", "run/dec": "decisions", "run/issue": "issues", "req/list": "requirements", "req/check": "checks" };
 
+function route() {
+  const [g = "home", sub, id] = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
+  const nav = NAV.find((n) => n.k === g) || NAV[0];
+  return { nav, sub: nav.subs ? (nav.subs.find((s) => s[0] === sub) ? sub : nav.subs[0][0]) : null, id };
+}
+let lastRoute = "";
+async function render() {
+  const { nav, sub, id } = route();
+  const rk = `${nav.k}/${sub}/${id || ""}`;
+  if (rk !== lastRoute) { if (S.form && !(S.form.row && S.form.row === id)) S.form = null; lastRoute = rk; }
+  const C = S.content, pj = C.project;
+  $("#hTitle").textContent = pj.name;
+  $("#hSub").textContent = `${pj.goal} · ${pj.targets}`;
+  $("#tabs").innerHTML = NAV.map((n) => `<a class="tab ${n.alert && n.alert() ? "alert" : ""}" role="tab" href="#/${n.k}" aria-selected="${n.k === nav.k}"><span class="y">${esc(n.y())}</span><span class="m">${n.l}</span></a>`).join("");
+  $("#subnav").innerHTML = nav.subs ? `<nav class="seg">${nav.subs.map(([k, l]) => `<a href="#/${nav.k}/${k}" aria-pressed="${k === sub}">${l}</a>`).join("")}</nav>` : "";
+  const next = C.schedule.find((s) => s.state === "next") || {};
+  $("#meta").innerHTML = `<span>기준일 ${esc(pj.baseDate)}</span><span class="pill">${esc(pj.phase)}</span><span>다음 · ${esc(next.date || "")} ${esc(next.title || "")}</span>${S.me ? `<span>${esc(S.me)}</span>` : ""}`;
+  const addKey = ADD[`${nav.k}/${sub}`];
+  const ab = $("#addBtn");
+  ab.hidden = !(S.apiOk && addKey && !id);
+  if (addKey) { $("#addLbl").textContent = `${E[addKey].name} 등록`; ab.onclick = () => { S.form = { key: addKey, row: null }; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }; }
+  const m = $("#main");
+  try { await P[nav.k](m, sub, id); } catch (e) { m.innerHTML = card("오류", "", `<div class="empty">${esc(e.message)}</div>`); console.error(e); }
+}
+window.addEventListener("hashchange", () => { if (legacy()) return; render(); window.scrollTo(0, 0); });
+$("#themeBtn").onclick = () => {
+  const root = document.documentElement;
+  const cur = root.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const nx = cur === "dark" ? "light" : "dark";
+  root.setAttribute("data-theme", nx);
+  try { localStorage.setItem("salesall-theme", nx); } catch (e) {}
+};
+// 구 경로 호환 (#/fu, #/req/R01, #/guide/9 등)
+function legacy() {
+  const h = location.hash.replace(/^#\/?/, "").split("/");
+  const map = { dashboard: "#/home", fu: "#/run/fu", feedback: "#/home", meeting: "#/plan/meeting", guide: "#/ref/guide", glossary: "#/ref/glossary", docs: "#/ref/docs", log: "#/admin/log", cross: "#/req/gap" };
+  if (map[h[0]]) { location.replace(map[h[0]] + (h[1] ? "/" + h[1] : "")); return true; }
+  if (h[0] === "req" && /^R\d+/.test(h[1] || "")) { location.replace("#/req/list/" + h[1]); return true; }
+  return false;
+}
+legacy();
 loadAll().then(render);
 })();

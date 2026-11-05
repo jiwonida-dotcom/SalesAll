@@ -6,19 +6,21 @@
 - 빌드 단계 없음 (Vanilla JS)
 - 접근 제어: Cloudflare Access (Zero Trust)
 
-## 메뉴
+## 메뉴 (IA v2 · GATAG UI 스타일)
 
-| 메뉴 | 데이터 | 기능 |
+| 그룹 | 하위 메뉴 | 데이터 |
 | --- | --- | --- |
-| 대시보드 | D1 + 정적 | 단계·KPI·일정·우선 F/U·리스크·최근 변경 |
-| F/U 트래커 | D1 `fu_items` | 등록·수정·삭제, 목록 내 상태 변경, 피드백 |
-| 요구사항 | D1 `requirements` | 세일즈올 현행 대비 갭·판단·진행 관리, 가이드 슬라이드 연결, CSV 내보내기 |
-| 피드백 | D1 `feedback` | 대상(일반·F/U·요구사항·회의록·가이드)별 의견·질문·이슈·결정요청, 처리 상태·답변 |
-| 크로스 분석 | 정적 `content.json` | 가이드 × 회의록 대조, 회의 인식 정정, 테스트 계정 검증 체크리스트 |
-| 회의록 | 정적 `content.json` | 2026-11-05 회의록 |
-| 세일즈올 가이드 | 정적 + `public/guide/*.jpg` | U+Sales All 판매점편 요약, MVNO 시사점, 슬라이드 42장 뷰어 |
-| 용어집 · 자료 목록 | 정적 | 녹취 용어 보정, 자료 위치 |
-| 변경 이력 | D1 `change_log` | 모든 등록·수정·삭제 기록(작업자 = Access 이메일) |
+| 홈 | 대시보드 (현 단계·할 일·U+ 질의·이슈 KPI, 갭 분포, 최근 결정) | D1 + 정적 |
+| 실행 관리 | 할 일 · U+ 질의 · 결정 로그 · 이슈·리스크 | D1 `fu_items` `inquiries` `decisions` `issues` |
+| 요구사항 | 목록 · 사업자별 매트릭스 · 갭 분석 · 검증 체크리스트 | D1 `requirements` `checks` + 정적 `cross` |
+| 일정·회의 | 마일스톤 · 회의록(목록·상세, 결정·액션·요구사항 자동 연결) | 정적 `phases` `schedule` `meetings` |
+| 레퍼런스 | 세일즈올 가이드 · 용어집 · 자료실 | 정적 |
+| 관리 | 변경 이력 · 참여자·사업자 | D1 `change_log` + 정적 |
+
+- 모든 상세 화면 하단 공통 코멘트 (D1 `feedback`)
+- 목록 화면 상태값 바로 변경, 헤더 '등록' 버튼 → 인라인 등록 폼
+- 라이트/다크 테마 전환
+- 구 경로(`#/fu`, `#/req/R01`, `#/guide/9` 등) 자동 이동
 
 ## 디렉터리
 
@@ -28,8 +30,8 @@ public/            정적 사이트 (Pages 출력 디렉터리)
   data/content.json   회의록·가이드 분석·용어집·일정 (정적 콘텐츠)
   guide/s-01~42.jpg   세일즈올 가이드 슬라이드 이미지
 functions/api/[[path]].js   API (D1 바인딩 DB)
-migrations/        D1 스키마(0001), 초기 데이터(0002)
-seed/seed.json     초기 F/U·요구사항 원본 → scripts/build_seed.py 로 0002 생성
+migrations/        D1 스키마(0001), 초기 데이터(0002), 보정(0003·0004), IA v2 확장(0005)
+seed/seed.json     초기 데이터 원본 → scripts/build_seed.py 로 0002·0005 생성
 wrangler.toml
 ```
 
@@ -75,7 +77,7 @@ npx wrangler pages dev          # http://localhost:8788
 | --- | --- |
 | F/U·요구사항·피드백 | 웹에서 직접 수정 (D1 즉시 반영, 재배포 불필요) |
 | 회의록·가이드·용어집·일정 추가 | `public/data/content.json` 편집 → 커밋·푸시 |
-| 신규 회의록 | `content.json` 의 `meetings` 배열에 추가 (현재 화면은 첫 번째 회의 표시) |
+| 신규 회의록 | `content.json` 의 `meetings` 배열에 추가 (`id`, `ref`: 요구사항·할 일 출처 표기와 동일하게) |
 | 스키마 변경 | `migrations/0003_*.sql` 추가 → `npx wrangler d1 migrations apply salesall-db --remote` |
 | D1 백업 | `npx wrangler d1 export salesall-db --remote --output backup.sql` |
 
@@ -84,13 +86,11 @@ npx wrangler pages dev          # http://localhost:8788
 | Method | Path | 비고 |
 | --- | --- | --- |
 | GET | `/api/me` | 로그인 이메일 |
-| GET | `/api/summary` | 대시보드 집계 |
-| GET/POST | `/api/fu` | 목록 / 등록(ID 자동 F#) |
-| GET/PATCH/DELETE | `/api/fu/:id` | |
-| GET/POST | `/api/requirements` | 등록 시 ID 자동 R## |
-| GET/PATCH/DELETE | `/api/requirements/:id` | |
-| GET/POST | `/api/feedback?target_type=&target_id=` | |
-| PATCH/DELETE | `/api/feedback/:id` | 상태·답변 |
+| GET | `/api/all` | 전체 운영 데이터 일괄 조회 (초기 로딩) |
+| GET/POST | `/api/{fu\|requirements\|inquiries\|decisions\|issues\|checks}` | 목록 / 등록 (ID 자동: F#, R##, Q##, D##, I##, C##) |
+| GET/PATCH/DELETE | `/api/{entity}/:id` | |
+| GET/POST | `/api/comments?target_type=&target_id=` | 코멘트 (구 `/api/feedback` 호환) |
+| PATCH/DELETE | `/api/comments/:id` | |
 | GET | `/api/changelog?limit=` | 최대 500 |
 
 ## 데이터 기준

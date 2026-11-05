@@ -484,5 +484,387 @@
       "priority": "하",
       "status": "취합"
     }
+  ],
+  "inquiries": [
+    {
+      "id": "Q01",
+      "title": "요구사항 문서 양식·테스트 계정 발급 요청",
+      "detail": "참석자별 테스트 계정 필요",
+      "reqs": "",
+      "fu_ref": "F1",
+      "to_party": "U+ 시스템 구축 담당",
+      "status": "작성",
+      "owner": "허지원 책임",
+      "asked_at": "",
+      "answered_at": "",
+      "answer": ""
+    },
+    {
+      "id": "Q02",
+      "title": "외국인(여권) 개통 가능 여부, 외부 접속 테스트 가능 여부",
+      "detail": "",
+      "reqs": "R17",
+      "fu_ref": "F4",
+      "to_party": "U+ 시스템 구축 담당",
+      "status": "작성",
+      "owner": "허지원 책임",
+      "asked_at": "",
+      "answered_at": "",
+      "answer": ""
+    },
+    {
+      "id": "Q03",
+      "title": "선불 전용 화면 필요 여부",
+      "detail": "충전은 플랫폼 외부 처리",
+      "reqs": "R17",
+      "fu_ref": "",
+      "to_party": "U+ 시스템 구축 담당",
+      "status": "작성",
+      "owner": "허지원 책임",
+      "asked_at": "",
+      "answered_at": "",
+      "answer": ""
+    },
+    {
+      "id": "Q04",
+      "title": "마케팅 동의 항목값 연동 방식·사업자 개발 범위",
+      "detail": "동의 1·2·3번 항목값 API 수신",
+      "reqs": "R05",
+      "fu_ref": "",
+      "to_party": "U+ 시스템 구축 담당",
+      "status": "작성",
+      "owner": "허지원 책임",
+      "asked_at": "",
+      "answered_at": "",
+      "answer": ""
+    },
+    {
+      "id": "Q05",
+      "title": "청구정보 인증의 계좌 명의자 검증 범위",
+      "detail": "오류코드 B102·0051·0122·D101 기준",
+      "reqs": "R08",
+      "fu_ref": "",
+      "to_party": "U+ 시스템 구축 담당",
+      "status": "작성",
+      "owner": "허지원 책임",
+      "asked_at": "",
+      "answered_at": "",
+      "answer": ""
+    },
+    {
+      "id": "Q06",
+      "title": "개통 단계 고객 입력값 수정 가능 여부",
+      "detail": "",
+      "reqs": "R15",
+      "fu_ref": "",
+      "to_party": "U+ 시스템 구축 담당",
+      "status": "작성",
+      "owner": "허지원 책임",
+      "asked_at": "",
+      "answered_at": "",
+      "answer": ""
+    },
+    {
+      "id": "Q07",
+      "title": "MVNO 개통 주체·신청서 전송 대상",
+      "detail": "가이드: U+ 개통실 전송 / 회의: 판매점 → 대리점 확인 → 개통",
+      "reqs": "R24",
+      "fu_ref": "F10",
+      "to_party": "U+ 시스템 구축 담당",
+      "status": "작성",
+      "owner": "허지원 책임",
+      "asked_at": "",
+      "answered_at": "",
+      "answer": ""
+    },
+    {
+      "id": "Q08",
+      "title": "판매마당 신분증 스캔 의존 구조의 MVNO 판매점 적용",
+      "detail": "",
+      "reqs": "R23",
+      "fu_ref": "F10",
+      "to_party": "U+ 시스템 구축 담당",
+      "status": "작성",
+      "owner": "허지원 책임",
+      "asked_at": "",
+      "answered_at": "",
+      "answer": ""
+    },
+    {
+      "id": "Q09",
+      "title": "가입 사전조회(실명·가입 가능여부) 사업자별 연동",
+      "detail": "",
+      "reqs": "R25",
+      "fu_ref": "F10",
+      "to_party": "U+ 시스템 구축 담당",
+      "status": "작성",
+      "owner": "허지원 책임",
+      "asked_at": "",
+      "answered_at": "",
+      "answer": ""
+    },
+    {
+      "id": "Q10",
+      "title": "카드번호 별지 서식 전달과 개인정보 미저장 정합성",
+      "detail": "",
+      "reqs": "R27,R06",
+      "fu_ref": "F10",
+      "to_party": "U+ 시스템 구축 담당",
+      "status": "작성",
+      "owner": "허지원 책임",
+      "asked_at": "",
+      "answered_at": "",
+      "answer": ""
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D01",
+      "title": "U+ 테스트 계정 직접 사용 후 요구사항 확정",
+      "rationale": "화면 자료만으로 판단 불가",
+      "decided_at": "2026-11-05",
+      "source": "M20261105",
+      "status": "확정",
+      "reqs": ""
+    },
+    {
+      "id": "D02",
+      "title": "요구사항은 문서(글 또는 PPT 화면 캡처)로 취합·전달",
+      "rationale": "",
+      "decided_at": "2026-11-05",
+      "source": "M20261105",
+      "status": "확정",
+      "reqs": ""
+    },
+    {
+      "id": "D03",
+      "title": "현 단계 공수 미고려, 요구사항 전량 취합 → 범위 조정은 취합 후",
+      "rationale": "",
+      "decided_at": "2026-11-05",
+      "source": "M20261105",
+      "status": "확정",
+      "reqs": ""
+    },
+    {
+      "id": "D04",
+      "title": "계정 운영은 판매마당과 동일, 잠금 해제 사업자 직접 처리는 요구",
+      "rationale": "",
+      "decided_at": "2026-11-05",
+      "source": "M20261105",
+      "status": "확정",
+      "reqs": "R14"
+    },
+    {
+      "id": "D05",
+      "title": "판매점 입력 정보 플랫폼 미저장, U+ 시스템 직접 전달",
+      "rationale": "개인정보",
+      "decided_at": "2026-11-05",
+      "source": "M20261105",
+      "status": "확정",
+      "reqs": "R06"
+    },
+    {
+      "id": "D06",
+      "title": "단말 재고 기능 미요구, 사업자 지정 노출 단말 기능만 요구",
+      "rationale": "헬로는 U+ 시스템 재고 미관리",
+      "decided_at": "2026-11-05",
+      "source": "M20261105",
+      "status": "확정",
+      "reqs": "R11"
+    }
+  ],
+  "issues": [
+    {
+      "id": "I01",
+      "title": "출시 일정 불일치",
+      "type": "리스크",
+      "impact": "상",
+      "status": "열림",
+      "owner": "허지원 책임",
+      "action": "녹음 25:44 '11월까지 출시' 언급 vs 2027-1Q 개발 목표 → 일정 확인",
+      "reqs": ""
+    },
+    {
+      "id": "I02",
+      "title": "요구사항 과다 시 2027-1Q 개발 곤란, 범위 축소 요청 가능",
+      "type": "리스크",
+      "impact": "상",
+      "status": "열림",
+      "owner": "허지원 책임",
+      "action": "요구사항 범위(필수/선택) 분류",
+      "reqs": ""
+    },
+    {
+      "id": "I03",
+      "title": "마케팅 동의 연동 사업자 측 개발 공수",
+      "type": "리스크",
+      "impact": "중",
+      "status": "열림",
+      "owner": "",
+      "action": "연동 방식 U+ 확인(Q04)",
+      "reqs": "R05"
+    },
+    {
+      "id": "I04",
+      "title": "요금제·약관 사업자 직접 운영 시 운영 공수 부담",
+      "type": "리스크",
+      "impact": "중",
+      "status": "열림",
+      "owner": "",
+      "action": "운영 주체 결정",
+      "reqs": "R03,R04"
+    },
+    {
+      "id": "I05",
+      "title": "회의 녹취록 원문 미보유",
+      "type": "이슈",
+      "impact": "하",
+      "status": "열림",
+      "owner": "허지원 책임",
+      "action": "02·03 txt 확보(F11)",
+      "reqs": ""
+    }
+  ],
+  "checks": [
+    {
+      "id": "C01",
+      "area": "화면 흐름",
+      "item": "가입 시작 화면 구성, 사업자·유심/단말 선택 위치",
+      "reqs": "R01",
+      "result": "미확인",
+      "note": "",
+      "checked_by": "",
+      "checked_at": ""
+    },
+    {
+      "id": "C02",
+      "area": "요금제",
+      "item": "요금제 목록 건수·검색·정렬, 요금제명 표시 길이",
+      "reqs": "R04",
+      "result": "미확인",
+      "note": "",
+      "checked_by": "",
+      "checked_at": ""
+    },
+    {
+      "id": "C03",
+      "area": "약관·동의",
+      "item": "약관 동의 항목 구성, 마케팅·결합할인 동의 항목 존재",
+      "reqs": "R03,R05",
+      "result": "미확인",
+      "note": "",
+      "checked_by": "",
+      "checked_at": ""
+    },
+    {
+      "id": "C04",
+      "area": "납부·청구",
+      "item": "지로 선택지 노출, 청구서 기본값, 이메일+App 선택",
+      "reqs": "R09,R10",
+      "result": "미확인",
+      "note": "",
+      "checked_by": "",
+      "checked_at": ""
+    },
+    {
+      "id": "C05",
+      "area": "계좌 인증",
+      "item": "예금주 불일치 계좌 입력 시 결과",
+      "reqs": "R08",
+      "result": "미확인",
+      "note": "",
+      "checked_by": "",
+      "checked_at": ""
+    },
+    {
+      "id": "C06",
+      "area": "메모",
+      "item": "메모란 계좌번호·연락처 입력 시 처리",
+      "reqs": "R07",
+      "result": "미확인",
+      "note": "",
+      "checked_by": "",
+      "checked_at": ""
+    },
+    {
+      "id": "C07",
+      "area": "단말",
+      "item": "판매/비판매 선택, 일련번호 직접 입력, 재고 조회 결과",
+      "reqs": "R11",
+      "result": "미확인",
+      "note": "",
+      "checked_by": "",
+      "checked_at": ""
+    },
+    {
+      "id": "C08",
+      "area": "지원금",
+      "item": "공시지원금·그 외 지원금 입력·자동 반영",
+      "reqs": "R16",
+      "result": "미확인",
+      "note": "",
+      "checked_by": "",
+      "checked_at": ""
+    },
+    {
+      "id": "C09",
+      "area": "임시저장",
+      "item": "이어하기 조회, 보관 기간",
+      "reqs": "R12",
+      "result": "미확인",
+      "note": "",
+      "checked_by": "",
+      "checked_at": ""
+    },
+    {
+      "id": "C10",
+      "area": "미성년자",
+      "item": "법정대리인 서류 미첨부 상태 전송 가능 여부",
+      "reqs": "R13",
+      "result": "미확인",
+      "note": "",
+      "checked_by": "",
+      "checked_at": ""
+    },
+    {
+      "id": "C11",
+      "area": "외국인",
+      "item": "외국인 유형 선택 시 인증 수단(여권)",
+      "reqs": "R17",
+      "result": "미확인",
+      "note": "",
+      "checked_by": "",
+      "checked_at": ""
+    },
+    {
+      "id": "C12",
+      "area": "개통 처리",
+      "item": "전송 후 수신 주체, 수신 측 입력값 수정 가능 여부",
+      "reqs": "R15,R24",
+      "result": "미확인",
+      "note": "",
+      "checked_by": "",
+      "checked_at": ""
+    },
+    {
+      "id": "C13",
+      "area": "사전조회",
+      "item": "실명확인·가입 가능여부 조회 대상 사업자",
+      "reqs": "R25",
+      "result": "미확인",
+      "note": "",
+      "checked_by": "",
+      "checked_at": ""
+    },
+    {
+      "id": "C14",
+      "area": "계정",
+      "item": "로그인 가능 시간, 비밀번호 오류 잠금·해제 경로",
+      "reqs": "R14,R20",
+      "result": "미확인",
+      "note": "",
+      "checked_by": "",
+      "checked_at": ""
+    }
   ]
 }
