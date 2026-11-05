@@ -1,0 +1,17 @@
+{
+  "name": "salesall-mvno",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "대리점/판매점 오프라인신청 시스템 MVNO 구축 — 프로젝트 통합관리 (Cloudflare Pages + D1)",
+  "scripts": {
+    "dev": "wrangler pages dev",
+    "db:migrate:local": "wrangler d1 migrations apply salesall-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply salesall-db --remote",
+    "seed": "python3 scripts/build_seed.py",
+    "deploy": "wrangler pages deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

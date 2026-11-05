@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SalesAll MVNO 프로젝트 관리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23c2185b'/><text x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'>S</text></svg>">
+</head>
+<body>
+<div class="layout">
+  <aside class="side" id="side">
+    <div class="brand">
+      <div class="logo">S</div>
+      <div><b>SalesAll MVNO</b><small>오프라인신청 시스템 구축</small></div>
+    </div>
+    <nav id="nav">
+      <a href="#/dashboard" data-r="dashboard">대시보드</a>
+      <a href="#/fu" data-r="fu">F/U 트래커</a>
+      <a href="#/req" data-r="req">요구사항</a>
+      <a href="#/feedback" data-r="feedback">피드백</a>
+      <div class="nav-sep">자료</div>
+      <a href="#/meeting" data-r="meeting">회의록</a>
+      <a href="#/guide" data-r="guide">세일즈올 가이드</a>
+      <a href="#/glossary" data-r="glossary">용어집</a>
+      <a href="#/docs" data-r="docs">자료 목록</a>
+      <a href="#/log" data-r="log">변경 이력</a>
+    </nav>
+    <div class="me" id="me"></div>
+  </aside>
+  <main>
+    <header class="top">
+      <button class="menu" id="menuBtn" aria-label="메뉴">☰</button>
+      <h1 id="pageTitle">대시보드</h1>
+      <div class="top-r" id="topActions"></div>
+    </header>
+    <div id="banner"></div>
+    <section id="view" class="view"></section>
+  </main>
+</div>
+<div class="modal" id="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true">
+    <div class="modal-hd"><b id="modalTitle"></b><button class="x" data-close>×</button></div>
+    <div class="modal-bd" id="modalBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

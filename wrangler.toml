@@ -1,0 +1,10 @@
+# Cloudflare Pages 설정 (wrangler pages deploy / Git 연동 공용)
+name = "salesall"
+pages_build_output_dir = "public"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "salesall-db"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"   # npx wrangler d1 create salesall-db 결과값
+migrations_dir = "migrations"
