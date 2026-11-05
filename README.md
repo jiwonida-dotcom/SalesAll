@@ -35,32 +35,35 @@ seed/seed.json     초기 데이터 원본 → scripts/build_seed.py 로 0002·0
 wrangler.toml
 ```
 
-## 배포 (최초 1회)
+## 배포 — push.cmd
 
-1. **GitHub 푸시**
-   ```bash
-   git remote add origin https://github.com/jiwonida-dotcom/SalesAll.git
-   git push -u origin main
-   ```
-2. **D1 생성·마이그레이션** (로컬 PC, Node 18+)
-   ```bash
-   npm install
-   npx wrangler login
-   npx wrangler d1 create salesall-db        # 출력된 database_id → wrangler.toml 반영 후 커밋
-   npx wrangler d1 migrations apply salesall-db --remote
-   ```
-3. **Cloudflare Pages 프로젝트 생성**
-   - Workers & Pages → Create → Pages → Connect to Git → `jiwonida-dotcom/SalesAll`
+| 명령 | 동작 |
+| --- | --- |
+| `.\push.cmd init` | 첫 배포. npm install → wrangler login → D1 `salesall-db` 생성 → `wrangler.toml` database_id 자동 반영 → 원격 마이그레이션 → 커밋·태그 v1.0.0 → GitHub 푸시 → 대시보드 설정 안내 출력 |
+| `.\push.cmd` | patch 배포 (v1.0.0 → v1.0.1) |
+| `.\push.cmd minor` / `major` | minor·major 배포 |
+| `.\push.cmd "메시지"` | 커밋 제목 직접 지정 |
+| `-y` | 확인 없이 진행 |
+
+자동 처리
+- 커밋 메시지: `[버전] 변경 영역 + 추가/수정/삭제` 제목, 본문에 배포 버전·이전 버전·일시·변경 영역·파일 목록
+- 변경 영역 분류: 웹 화면, 정적 콘텐츠, 가이드 이미지, API, D1 마이그레이션, 초기 데이터, 배포 설정, 문서
+- `docs/deploy-history.md` 배포 이력 행 추가, 버전 태그 생성
+- 신규 `migrations/*.sql` 포함 시 푸시 전 원격 D1 적용 여부 확인 (스키마 선반영)
+- `.dev.vars`, `node_modules/`, `.wrangler/`, 키·토큰 포함 파일 커밋 차단
+- 로컬 기존 커밋만 있고 태그가 없는 경우: 기존 커밋 기준 v1.0.0 태그 후 푸시
+
+### Cloudflare 대시보드 설정 (최초 1회, `init` 완료 후)
+
+1. Workers & Pages → Create → Pages → Connect to Git → `jiwonida-dotcom/SalesAll`
    - Framework preset: None / Build command: 비움 / Build output directory: `public`
-   - Settings → Bindings → D1 database: 변수명 `DB` → `salesall-db` (Production·Preview 모두)
-   - ※ `wrangler.toml` 에 바인딩이 있으면 자동 인식, 대시보드 설정과 중복 시 wrangler.toml 우선
-4. **Cloudflare Access 적용**
-   - Zero Trust → Access → Applications → Add → Self-hosted
-   - Domain: `<프로젝트>.pages.dev` (Preview 포함 시 `*.<프로젝트>.pages.dev` 추가)
-   - Policy: Allow → Emails ending in `@medialog.co.kr` (외부 참여자는 개별 이메일 추가)
-   - 적용 후 API 작성자·변경 이력에 로그인 이메일 자동 기록 (`Cf-Access-Authenticated-User-Email`)
+2. Settings → Bindings → D1 database: 변수명 `DB` → `salesall-db` (Production·Preview)
+3. Zero Trust → Access → Applications → Self-hosted
+   - Domain: `<프로젝트>.pages.dev` (Preview 포함 시 `*.<프로젝트>.pages.dev`)
+   - Policy: Emails ending in `@medialog.co.kr` + 외부 참여자 개별 이메일
+   - 적용 후 작성자·변경 이력에 로그인 이메일 자동 기록
 
-이후 `main` 푸시 시 자동 배포.
+이후 `main` 푸시 시 Pages 자동 재빌드.
 
 ## 로컬 실행
 
